@@ -1,0 +1,448 @@
+// ignore_for_file: prefer_const_constructors
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../utils/constants.dart';
+import '../../models/models.dart';
+import '../../router/app_router.dart';
+
+class FriendsScreen extends StatelessWidget {
+  const FriendsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const SizedBox.shrink();
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Friends', style: AppTextStyles.displayMedium),
+                  IconButton(
+                    onPressed: () => _showAddFriendSheet(context),
+                    icon: const Icon(Icons.person_add_outlined,
+                        color: AppColors.accent),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Overall balance card ───────────────────────────────
+            _OverallBalanceCard(userId: currentUser.uid),
+
+            const SizedBox(height: 8),
+
+            // ── Friends list ──────────────────────────────────────
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(currentUser.uid)
+                    .collection('friends')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  if (docs.isEmpty) {
+                    return _EmptyFriendsState(
+                      onAddFriend: () => _showAddFriendSheet(context),
+                    );
+                  }
+
+                  final friends =
+                      docs.map((d) => Friend.fromFirestore(d)).toList();
+
+                  return ListView.separated(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: friends.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (context, i) => _FriendTile(
+                      friend: friends[i],
+                      currentUserId: currentUser.uid,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddFriendSheet(BuildContext context) {
+    final nameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isTemp = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Add a friend', style: AppTextStyles.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                'They don\'t need the app — add them as a contact.',
+                style: AppTextStyles.bodySmall,
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  hintText: 'Friend\'s name',
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+                    final uid = FirebaseAuth.instance.currentUser!.uid;
+                    final friends = FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .collection('friends');
+                    final count = (await friends.get()).docs.length;
+                    await friends.add({
+                      'name': nameController.text.trim(),
+                      'colorIndex': count % 8,
+                      'isTemporary': isTemp,
+                    });
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Add friend'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverallBalanceCard extends StatelessWidget {
+  final String userId;
+  const _OverallBalanceCard({required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('expenses')
+          .snapshots(),
+      builder: (context, snapshot) {
+        double totalOwed = 0; // Money others owe you (Green)
+        double totalOwe = 0; // Money you owe others (Red)
+
+        if (snapshot.hasData) {
+          for (final doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+            final paidBy = data['paidById'] as String? ?? '';
+
+            splits.forEach((friendId, amount) {
+              final amt = (amount as num).toDouble();
+
+              // Correct logic from Claude:
+              if (paidBy == userId) {
+                // If I paid, everyone else's split is money owed to me
+                if (friendId != userId) totalOwed += amt;
+              } else {
+                // If someone else paid, only my split is money I owe
+                if (friendId == userId) totalOwe += amt;
+              }
+            });
+          }
+        }
+
+        final net = totalOwed - totalOwe;
+        final isPositive = net >= 0;
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.lg,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Overall balance', style: AppTextStyles.labelMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      net == 0
+                          ? 'All settled up!'
+                          : '${isPositive ? '+' : ''}\$${net.abs().toStringAsFixed(2)}',
+                      style: AppTextStyles.moneyLarge.copyWith(
+                        color: net == 0
+                            ? AppColors.textSecondary
+                            : isPositive
+                                ? AppColors.success
+                                : AppColors.danger,
+                      ),
+                    ),
+                    if (net != 0)
+                      Text(
+                        isPositive ? 'you are owed overall' : 'you owe overall',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('owed to you', style: AppTextStyles.bodySmall),
+                  Text(
+                    '\$${totalOwed.toStringAsFixed(2)}',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('you owe', style: AppTextStyles.bodySmall),
+                  Text(
+                    '\$${totalOwe.toStringAsFixed(2)}',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FriendTile extends StatelessWidget {
+  final Friend friend;
+  final String currentUserId;
+
+  const _FriendTile({
+    required this.friend,
+    required this.currentUserId,
+  });
+
+  Future<double> _calculateBalance() async {
+    double balance = 0;
+
+    final expenses = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('expenses')
+        .get();
+
+    for (final doc in expenses.docs) {
+      final data = doc.data();
+      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final paidBy = data['paidById'] as String? ?? '';
+
+      if (splits.containsKey(friend.id)) {
+        final amt = (splits[friend.id] as num).toDouble();
+        // Corrected math: I paid = positive, they paid = negative
+        if (paidBy == currentUserId) {
+          balance += amt;
+        } else {
+          balance -= amt;
+        }
+      }
+    }
+
+    final settlements = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('settlements')
+        .get();
+
+    for (final doc in settlements.docs) {
+      final data = doc.data();
+      final fromId = data['fromId'] as String? ?? '';
+      final toId = data['toId'] as String? ?? '';
+      final amt = (data['amount'] as num).toDouble();
+
+      if (fromId == currentUserId && toId == friend.id) {
+        balance -= amt;
+      } else if (fromId == friend.id && toId == currentUserId) {
+        balance += amt;
+      }
+    }
+
+    return balance;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<double>(
+      future: _calculateBalance(),
+      builder: (context, snapshot) {
+        final balance = snapshot.data ?? 0.0;
+        final isPositive = balance > 0;
+        final isZero = balance.abs() < 0.01;
+
+        return GestureDetector(
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRoutes.friendDetail,
+            arguments: friend,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.md,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AvatarColors.background(friend.colorIndex),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      friend.initials,
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: AvatarColors.get(friend.colorIndex),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(friend.name, style: AppTextStyles.titleSmall),
+                      if (friend.isTemporary)
+                        Text('Contact only', style: AppTextStyles.bodySmall),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      isZero
+                          ? 'settled'
+                          : '\$${balance.abs().toStringAsFixed(2)}',
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: isZero
+                            ? AppColors.textHint
+                            : isPositive
+                                ? AppColors.success
+                                : AppColors.danger,
+                      ),
+                    ),
+                    if (!isZero)
+                      Text(
+                        isPositive ? 'owes you' : 'you owe',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right,
+                    color: AppColors.textHint, size: 18),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyFriendsState extends StatelessWidget {
+  final VoidCallback onAddFriend;
+  const _EmptyFriendsState({required this.onAddFriend});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.people_outline,
+                  color: AppColors.accent, size: 36),
+            ),
+            const SizedBox(height: 20),
+            Text('No friends yet', style: AppTextStyles.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Add friends to start splitting bills.\nThey don\'t need the app!',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onAddFriend,
+              icon: const Icon(Icons.person_add_outlined, size: 18),
+              label: const Text('Add a friend'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
