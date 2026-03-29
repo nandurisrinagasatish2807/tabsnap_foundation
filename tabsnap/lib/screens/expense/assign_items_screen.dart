@@ -158,7 +158,7 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
           const Divider(height: 1),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
               itemCount: _items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) => _ItemAssignCard(
@@ -170,48 +170,48 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
               ),
             ),
           ),
-        ],
-      ),
-      bottomSheet: Container(
-        color: AppColors.surface,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_splits.isNotEmpty) ...[
-              _SplitPreview(
-                splits: _splits,
-                friends: _friendsWithMe,
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (!_allItemsAssigned)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '${_items.where((i) => i.assignedTo.isEmpty).length} items still need assignment',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.warning,
+          Container(
+            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_splits.isNotEmpty) ...[
+                  _SplitPreview(
+                    splits: _splits,
+                    friends: _friendsWithMe,
                   ),
-                  textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                ],
+                if (!_allItemsAssigned)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${_items.where((i) => i.assignedTo.isEmpty).length} items still need assignment',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.warning,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _allItemsAssigned ? _goToSummary : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _allItemsAssigned ? AppColors.accent : AppColors.border,
+                    ),
+                    child: const Text(
+                      'Review Split →',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
                 ),
-              ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _allItemsAssigned ? _goToSummary : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      _allItemsAssigned ? AppColors.accent : AppColors.border,
-                ),
-                child: const Text(
-                  'Review Split →',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

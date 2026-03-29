@@ -8,10 +8,12 @@ import '../../router/app_router.dart';
 
 class ChoosePeopleScreen extends StatefulWidget {
   final String? groupId; // ← Added this
+  final bool isManual;
 
   const ChoosePeopleScreen({
     super.key,
     this.groupId, // ← Added this to catch the ID
+    this.isManual = false,
   });
 
   @override
@@ -121,15 +123,27 @@ class _ChoosePeopleScreenState extends State<ChoosePeopleScreen> {
   void _goNext() {
     if (_selected.isEmpty) return;
 
-    // Passing the widget.groupId (the sticky note) to the camera
-    Navigator.pushNamed(
-      context,
-      AppRoutes.camera,
-      arguments: {
-        'friends': _selected,
-        'groupId': widget.groupId,
-      },
-    );
+    if (widget.isManual) {
+      Navigator.pushNamed(
+        context,
+        AppRoutes.reviewItems,
+        arguments: {
+          'items': <ReceiptItem>[],
+          'friends': _selected,
+          'groupId': widget.groupId,
+        },
+      );
+    } else {
+      // Passing the widget.groupId (the sticky note) to the camera
+      Navigator.pushNamed(
+        context,
+        AppRoutes.camera,
+        arguments: {
+          'friends': _selected,
+          'groupId': widget.groupId,
+        },
+      );
+    }
   }
 
   @override
@@ -209,7 +223,27 @@ class _ChoosePeopleScreenState extends State<ChoosePeopleScreen> {
                 return ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
-                    _AddPersonTile(onTap: _addTemporary),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                          foregroundColor: AppColors.accent,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: AppColors.accent.withValues(alpha: 0.3)),
+                          ),
+                        ),
+                        onPressed: _addTemporary,
+                        icon: const Icon(Icons.person_add_alt_1),
+                        label: const Text(
+                          '+ Add Guest (No App Needed)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ),
+                    ),
                     if (friends.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -243,39 +277,13 @@ class _ChoosePeopleScreenState extends State<ChoosePeopleScreen> {
             child: Text(
               _selected.isEmpty
                   ? 'Select people to continue'
-                  : 'Next — scan receipt',
+                  : widget.isManual
+                      ? 'Next — add items'
+                      : 'Next — scan receipt',
             ),
           ),
         ),
       ),
-    );
-  }
-}
-// ─── Add Person Tile ──────────────────────────────────────────────────────────
-
-class _AddPersonTile extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AddPersonTile({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.person_add_outlined,
-            color: AppColors.accent, size: 20),
-      ),
-      title: Text('Add someone new', style: AppTextStyles.titleSmall),
-      subtitle: Text('No app needed', style: AppTextStyles.bodySmall),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.textHint, size: 18),
     );
   }
 }

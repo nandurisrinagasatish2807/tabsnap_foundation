@@ -34,16 +34,37 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
     _paidBy = widget.paidBy;
   }
 
-  // Calculate splits from item assignments
+  // ── Fixed splits calculation ─────────────────────
+  // Iterates through ITEM ASSIGNMENTS, not friends list
+  // This means anyone assigned to any item shows up,
+  // including "Me" (currentUser)
   Map<String, double> get _splits {
     final splits = <String, double>{};
+
     for (final item in widget.items) {
       if (item.assignedTo.isEmpty) continue;
-      final share = item.price / item.assignedTo.length;
-      for (final id in item.assignedTo) {
-        splits[id] = (splits[id] ?? 0) + share;
+
+      final count = item.assignedTo.length;
+      final unitShare = (item.price / count * 100).round() / 100;
+      double distributed = 0;
+
+      for (int i = 0; i < item.assignedTo.length; i++) {
+        final memberId = item.assignedTo[i];
+        final isLast = i == item.assignedTo.length - 1;
+
+        // Floating penny fix:
+        // Last person gets remainder to balance total
+        final share = isLast
+            ? double.parse((item.price - distributed).toStringAsFixed(2))
+            : unitShare;
+
+        splits[memberId] = (splits[memberId] ?? 0) + share;
+        if (!isLast) distributed += share;
       }
     }
+
+    // Remove zero or negative entries
+    splits.removeWhere((_, v) => v < 0.01);
     return splits;
   }
 
@@ -255,6 +276,28 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
     );
   }
 
+  String _nameFor(String memberId, String currentUid) {
+    if (memberId == currentUid) return 'Me';
+    // Search friends list passed from assign screen
+    try {
+      final friend = widget.friends.firstWhere((f) => f.id == memberId);
+      return friend.name;
+    } catch (_) {
+      // Not in friends list — use short ID
+      return memberId.length > 8 ? memberId.substring(0, 8) : memberId;
+    }
+  }
+
+  int _colorFor(String memberId) {
+    try {
+      final friend = widget.friends.firstWhere((f) => f.id == memberId);
+      return friend.colorIndex;
+    } catch (_) {
+      // Assign color based on string hash
+      return memberId.hashCode.abs() % 8;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final splits = _splits;
@@ -301,10 +344,23 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${widget.items.length} items · ${splits.length} people',
-                          style: AppTextStyles.bodySmall,
-                        ),
+                        // Verify splits balance exactly
+                        Builder(builder: (context) {
+                          final splitsTotal = splits.values.fold(0.0, (acc, v) => acc + v);
+                          final diff = (_total - splitsTotal).abs();
+                          if (diff > 0.02) {
+                            return Text(
+                              'Split total: \$${splitsTotal.toStringAsFixed(2)}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.warning,
+                              ),
+                            );
+                          }
+                          return Text(
+                            '${widget.items.length} items · ${splits.length} people',
+                            style: AppTextStyles.bodySmall,
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -353,14 +409,26 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                   const SizedBox(height: 8),
 
                   ...splits.entries.map((entry) {
-                    final friend = widget.friends.firstWhere(
-                      (f) => f.id == entry.key,
-                      orElse: () => Friend(
-                        id: entry.key,
-                        name: 'Unknown',
-                        colorIndex: 0,
-                      ),
-                    );
+                    final memberId = entry.key;
+                    final amount = entry.value;
+                    final currentUid =
+                        FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                    // Resolve name — check friends list first,
+                    // fall back to "Me" for current user
+                    final name = _nameFor(memberId, currentUid);
+                    final colorIdx = _colorFor(memberId);
+
+                    final initials = name
+                        .trim()
+                        .split(' ')
+                        .where((w) => w.isNotEmpty)
+                        .map((w) => w[0].toUpperCase())
+                        .take(2)
+                        .join();
+
+                    final thisMemberPaid = _paidBy.id == memberId;
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(16),
@@ -375,28 +443,39 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: AvatarColors.background(friend.colorIndex),
+                              color: AvatarColors.background(colorIdx),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
                               child: Text(
-                                friend.initials,
+                                initials,
                                 style: AppTextStyles.titleSmall.copyWith(
-                                  color: AvatarColors.get(friend.colorIndex),
+                                  color: AvatarColors.get(colorIdx),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(friend.name,
-                                style: AppTextStyles.titleSmall),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: AppTextStyles.titleSmall),
+                                if (thisMemberPaid)
+                                  Text('paid the bill',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.success,
+                                      )),
+                              ],
+                            ),
                           ),
                           Text(
-                            '\$${entry.value.toStringAsFixed(2)}',
+                            '\$${amount.toStringAsFixed(2)}',
                             style: AppTextStyles.moneyLarge.copyWith(
                               fontSize: 20,
-                              color: AppColors.accent,
+                              color: thisMemberPaid
+                                  ? AppColors.textSecondary
+                                  : AppColors.accent,
                             ),
                           ),
                         ],

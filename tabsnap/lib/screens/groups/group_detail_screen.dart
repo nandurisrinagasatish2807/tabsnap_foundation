@@ -253,8 +253,9 @@ class _GroupDetailScreenState
                   });
                   setState(() => _groupNotes =
                       controller.text.trim());
-                  if (context.mounted)
+                  if (context.mounted) {
                     Navigator.pop(context);
+                  }
                 },
                 child: const Text('Save notes'),
               ),
@@ -671,7 +672,7 @@ class _AddMemberSheetState
                   !widget.existingMemberIds
                       .contains(d.id));
 
-              if (!available.isEmpty) {
+              if (available.isNotEmpty) {
                 return Column(
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
@@ -930,35 +931,42 @@ class _ExpenseTile extends StatelessWidget {
         t.contains('walmart') ||
         t.contains('costco') ||
         t.contains('heb') ||
-        t.contains('kroger'))
+        t.contains('kroger')) {
       return Icons.shopping_cart_outlined;
+    }
     if (t.contains('restaurant') ||
         t.contains('pizza') ||
         t.contains('dinner') ||
         t.contains('lunch') ||
         t.contains('cafe') ||
         t.contains('sushi') ||
-        t.contains('biryani'))
+        t.contains('biryani')) {
       return Icons.restaurant_outlined;
+    }
     if (t.contains('uber') ||
         t.contains('lyft') ||
         t.contains('gas') ||
-        t.contains('parking'))
+        t.contains('parking')) {
       return Icons.directions_car_outlined;
+    }
     if (t.contains('electricity') ||
         t.contains('wifi') ||
         t.contains('internet') ||
-        t.contains('electric'))
+        t.contains('electric')) {
       return Icons.bolt_outlined;
-    if (t.contains('rent') || t.contains('apartment'))
+    }
+    if (t.contains('rent') || t.contains('apartment')) {
       return Icons.home_outlined;
+    }
     if (t.contains('flight') ||
         t.contains('hotel') ||
-        t.contains('airbnb'))
+        t.contains('airbnb')) {
       return Icons.flight_outlined;
+    }
     if (t.contains('movie') ||
-        t.contains('concert'))
+        t.contains('concert')) {
       return Icons.movie_outlined;
+    }
     return Icons.receipt_outlined;
   }
 

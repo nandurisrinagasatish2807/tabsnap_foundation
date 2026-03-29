@@ -53,9 +53,11 @@ class AppRouter {
         return _slide(GroupDetailScreen(group: group));
 
       case AppRoutes.choosePeople:
-        // Accept optional groupId from arguments
-        final groupId = settings.arguments as String?;
-        return _slide(ChoosePeopleScreen(groupId: groupId));
+        // Accept optional groupId and isManual from arguments
+        final args = settings.arguments as Map<String, dynamic>?;
+        final groupId = args?['groupId'] as String?;
+        final isManual = args?['isManual'] as bool? ?? false;
+        return _slide(ChoosePeopleScreen(groupId: groupId, isManual: isManual));
 
       case AppRoutes.camera:
         final args = settings.arguments as Map<String, dynamic>;

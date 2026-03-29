@@ -39,6 +39,7 @@ class _CameraScreenState extends State<CameraScreen> {
     final testFile = File('/sdcard/Download/receipt.jpg');
 
     if (await testFile.exists()) {
+      if (!mounted) return;
       final bool? useTest = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(

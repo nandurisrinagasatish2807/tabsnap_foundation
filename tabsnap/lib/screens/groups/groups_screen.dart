@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
+import '../../widgets/overall_balance_card.dart';
 
 class GroupsScreen extends StatelessWidget {
   const GroupsScreen({super.key});
@@ -40,7 +41,11 @@ class GroupsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            
+            // ── Overall balance card ───────────────────────────────
+            OverallBalanceCard(userId: currentUser.uid),
+
+            const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -75,7 +80,7 @@ class GroupsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 8),
                     itemBuilder: (context, i) =>
-                        _GroupTile(group: groups[i]),
+                        _GroupTile(group: groups[i], currentUserId: currentUser.uid),
                   );
                 },
               ),
@@ -231,59 +236,164 @@ class GroupsScreen extends StatelessWidget {
 
 class _GroupTile extends StatelessWidget {
   final Group group;
-  const _GroupTile({required this.group});
+  final String currentUserId;
+  const _GroupTile({required this.group, required this.currentUserId});
+
+  Future<(double, String?)> _fetchGroupState() async {
+    final uid = currentUserId;
+    
+    // 1. Calculate Balance
+    double balance = 0;
+    final expenses = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('expenses')
+        .where('groupId', isEqualTo: group.id)
+        .get();
+
+    for (final doc in expenses.docs) {
+      final data = doc.data();
+      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final paidBy = data['paidById'] as String? ?? '';
+      
+      double expenseNet = 0;
+      if (paidBy == uid) {
+        splits.forEach((k, v) {
+          if (k != uid) expenseNet += (v as num).toDouble();
+        });
+      } else {
+        if (splits.containsKey(uid)) {
+          expenseNet -= (splits[uid] as num).toDouble();
+        }
+      }
+      balance += expenseNet;
+    }
+
+    final settlements = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('settlements')
+        .where('groupId', isEqualTo: group.id)
+        .get();
+
+    for (final doc in settlements.docs) {
+      final data = doc.data();
+      final fromId = data['fromId'] as String? ?? '';
+      final toId = data['toId'] as String? ?? '';
+      final amt = (data['amount'] as num).toDouble();
+
+      if (fromId == uid) { // I paid someone
+        balance += amt;
+      } else if (toId == uid) { // Someone paid me
+        balance -= amt;
+      }
+    }
+
+    // 2. Fetch Last Activity
+    String? lastActivity;
+    final activities = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('activities')
+        .where('groupId', isEqualTo: group.id)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .get();
+
+    if (activities.docs.isNotEmpty) {
+      lastActivity = activities.docs.first.data()['description'] as String?;
+    }
+
+    return (balance, lastActivity);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(
-        context,
-        AppRoutes.groupDetail,
-        arguments: group,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.md,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accent
-                    .withValues(alpha: 0.1),
-                borderRadius: AppRadius.sm,
-              ),
-              child: Center(
-                child: Text(group.emoji,
-                    style:
-                        const TextStyle(fontSize: 24)),
-              ),
+    return FutureBuilder<(double, String?)>(
+      future: _fetchGroupState(),
+      builder: (context, snapshot) {
+        final balance = snapshot.data?.$1 ?? 0.0;
+        final lastActivity = snapshot.data?.$2;
+        final isPositive = balance > 0;
+        final isZero = balance.abs() < 0.01;
+
+        return GestureDetector(
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRoutes.groupDetail,
+            arguments: group,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.md,
+              border: Border.all(color: AppColors.border),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(group.name,
-                      style: AppTextStyles.titleSmall),
-                  Text(
-                    '${group.memberIds.length} member${group.memberIds.length != 1 ? 's' : ''}',
-                    style: AppTextStyles.bodySmall,
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.sm,
                   ),
-                ],
-              ),
+                  child: Center(
+                    child: Text(group.emoji, style: const TextStyle(fontSize: 24)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(group.name, style: AppTextStyles.titleSmall),
+                      const SizedBox(height: 2),
+                      if (lastActivity != null)
+                        Text(
+                          'Last: $lastActivity',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          maxLines: 1,
+                        )
+                      else
+                        Text(
+                          '${group.memberIds.length} member${group.memberIds.length != 1 ? 's' : ''}',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      isZero ? 'Settled' : '\$${balance.abs().toStringAsFixed(2)}',
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: isZero
+                            ? AppColors.textHint
+                            : isPositive
+                                ? AppColors.success
+                                : AppColors.danger,
+                      ),
+                    ),
+                    if (!isZero)
+                      Text(
+                        isPositive ? 'you are owed' : 'you owe',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, color: AppColors.textHint, size: 18),
+              ],
             ),
-            const Icon(Icons.chevron_right,
-                color: AppColors.textHint, size: 18),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
