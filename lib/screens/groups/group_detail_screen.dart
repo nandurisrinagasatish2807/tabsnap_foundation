@@ -113,9 +113,6 @@ class _GroupDetailScreenState
         if (paidBy == uid) {
           raw[memberId] =
               (raw[memberId] ?? 0) + amt;
-        } else if (paidBy == memberId) {
-          raw[memberId] =
-              (raw[memberId] ?? 0) - amt;
         }
       });
 

@@ -202,16 +202,39 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
 
             // Summary of who owes what
             ..._splits.entries.map((entry) {
+              final isMe = entry.key == FirebaseAuth.instance.currentUser?.uid || entry.key == 'me';
+              final paidByMe = _paidBy.id == 'me' || _paidBy.id == FirebaseAuth.instance.currentUser?.uid;
+              final isPayer = entry.key == _paidBy.id || (paidByMe && isMe);
+
               final friend = widget.friends.firstWhere(
                 (f) => f.id == entry.key,
                 orElse: () => Friend(
                   id: entry.key,
-                  name: 'Someone',
+                  name: isMe ? 'Me' : 'Someone',
                   colorIndex: 0,
                 ),
               );
-              final paidByMe = _paidBy.id == 'me' ||
-                  _paidBy.id == FirebaseAuth.instance.currentUser?.uid;
+
+              String statusText;
+              Color statusColor;
+              
+              if (paidByMe) {
+                statusText = isMe ? 'your share \$${entry.value.toStringAsFixed(2)}' : 'owes \$${entry.value.toStringAsFixed(2)}';
+                statusColor = isMe ? AppColors.textSecondary : AppColors.success;
+              } else {
+                if (isMe) {
+                  statusText = 'you owe \$${entry.value.toStringAsFixed(2)}';
+                  statusColor = AppColors.danger;
+                } else if (isPayer) {
+                  statusText = 'their share \$${entry.value.toStringAsFixed(2)}';
+                  statusColor = AppColors.textSecondary;
+                } else {
+                  final payerName = _paidBy.name.split(' ').first;
+                  statusText = 'owes $payerName \$${entry.value.toStringAsFixed(2)}';
+                  statusColor = AppColors.textSecondary;
+                }
+              }
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
@@ -242,11 +265,9 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                       ),
                     ),
                     Text(
-                      paidByMe
-                          ? 'owes \$${entry.value.toStringAsFixed(2)}'
-                          : 'you owe \$${entry.value.toStringAsFixed(2)}',
+                      statusText,
                       style: AppTextStyles.titleSmall.copyWith(
-                        color: paidByMe ? AppColors.success : AppColors.danger,
+                        color: statusColor,
                       ),
                     ),
                   ],

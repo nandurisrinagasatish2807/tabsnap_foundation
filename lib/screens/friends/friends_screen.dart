@@ -183,13 +183,13 @@ class _FriendTile extends StatelessWidget {
       final splits = Map<String, dynamic>.from(data['splits'] ?? {});
       final paidBy = data['paidById'] as String? ?? '';
 
-      if (splits.containsKey(friend.id)) {
-        final amt = (splits[friend.id] as num).toDouble();
-        // Corrected math: I paid = positive, they paid = negative
-        if (paidBy == currentUserId) {
-          balance += amt;
-        } else {
-          balance -= amt;
+      if (paidBy == currentUserId) {
+        if (splits.containsKey(friend.id)) {
+          balance += (splits[friend.id] as num).toDouble();
+        }
+      } else if (paidBy == friend.id) {
+        if (splits.containsKey(currentUserId)) {
+          balance -= (splits[currentUserId] as num).toDouble();
         }
       }
     }

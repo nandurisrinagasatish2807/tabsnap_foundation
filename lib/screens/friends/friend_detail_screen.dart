@@ -131,13 +131,13 @@ class _FriendHeader extends StatelessWidget {
       final splits = Map<String, dynamic>.from(data['splits'] ?? {});
       final paidBy = data['paidById'] as String? ?? '';
 
-      if (splits.containsKey(friend.id)) {
-        final amt = (splits[friend.id] as num).toDouble();
-        // Corrected math logic:
-        if (paidBy == currentUserId) {
-          balance += amt;
-        } else {
-          balance -= amt;
+      if (paidBy == currentUserId) {
+        if (splits.containsKey(friend.id)) {
+          balance += (splits[friend.id] as num).toDouble();
+        }
+      } else if (paidBy == friend.id) {
+        if (splits.containsKey(currentUserId)) {
+          balance -= (splits[currentUserId] as num).toDouble();
         }
       }
     }
@@ -327,12 +327,13 @@ class _SettleUpBar extends StatelessWidget {
       final splits = Map<String, dynamic>.from(data['splits'] ?? {});
       final paidBy = data['paidById'] as String? ?? '';
 
-      if (splits.containsKey(friend.id)) {
-        final amt = (splits[friend.id] as num).toDouble();
-        if (paidBy == currentUserId) {
-          balance += amt;
-        } else {
-          balance -= amt;
+      if (paidBy == currentUserId) {
+        if (splits.containsKey(friend.id)) {
+          balance += (splits[friend.id] as num).toDouble();
+        }
+      } else if (paidBy == friend.id) {
+        if (splits.containsKey(currentUserId)) {
+          balance -= (splits[currentUserId] as num).toDouble();
         }
       }
     }

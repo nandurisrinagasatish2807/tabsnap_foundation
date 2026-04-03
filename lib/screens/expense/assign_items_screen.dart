@@ -91,13 +91,32 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
 
   Map<String, double> get _splits {
     final splits = <String, double>{};
+
     for (final item in _items) {
       if (item.assignedTo.isEmpty) continue;
-      final share = item.price / item.assignedTo.length;
-      for (final id in item.assignedTo) {
-        splits[id] = (splits[id] ?? 0) + share;
+      
+      final count = item.assignedTo.length;
+      final unitShare = (item.price / count * 100).round() / 100.0;
+      double distributed = 0;
+
+      for (int i = 0; i < item.assignedTo.length; i++) {
+        final memberId = item.assignedTo[i];
+        final isLast = i == item.assignedTo.length - 1;
+
+        // Floating penny fix:
+        // Last person gets remainder to balance total
+        final share = isLast
+            ? double.parse((item.price - distributed).toStringAsFixed(2))
+            : unitShare;
+
+        splits[memberId] = (splits[memberId] ?? 0.0) + share;
+        if (!isLast) distributed += share;
       }
     }
+
+    // Only include users with a balance > $0.00
+    splits.removeWhere((_, value) => value < 0.01);
+    
     return splits;
   }
 
@@ -381,6 +400,8 @@ class _SplitPreview extends StatelessWidget {
 
     if (assignedFriends.isEmpty) return const SizedBox();
 
+    final splitsTotal = splits.values.fold(0.0, (acc, v) => acc + v);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -391,7 +412,16 @@ class _SplitPreview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Current split', style: AppTextStyles.labelMedium),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Current split', style: AppTextStyles.labelMedium),
+              Text(
+                'Total: \$${splitsTotal.toStringAsFixed(2)}',
+                style: AppTextStyles.labelMedium.copyWith(color: AppColors.accent),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           ...assignedFriends.map((friend) {
             final amount = splits[friend.id] ?? 0;
