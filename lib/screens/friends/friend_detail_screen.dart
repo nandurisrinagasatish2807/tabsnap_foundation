@@ -10,6 +10,20 @@ class FriendDetailScreen extends StatelessWidget {
   final Friend friend;
   const FriendDetailScreen({super.key, required this.friend});
 
+  static List<QueryDocumentSnapshot> _filterBilateralExpenses(
+      List<QueryDocumentSnapshot> docs, String currentUserId, String friendId) {
+    return docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final paidBy = data['paidById']?.toString() ?? '';
+
+      final iPaidAndTheyOwe = paidBy == currentUserId && splits.containsKey(friendId);
+      final theyPaidAndIOwe = paidBy == friendId && splits.containsKey(currentUserId);
+
+      return iPaidAndTheyOwe || theyPaidAndIOwe;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -58,17 +72,7 @@ class FriendDetailScreen extends StatelessWidget {
 
                 final docs = snapshot.data?.docs ?? [];
 
-                // Filter only expenses involving direct debts between me and this friend
-                final friendExpenses = docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final splits = Map<String, dynamic>.from(data['splits'] ?? {});
-                  final paidBy = data['paidById'] as String? ?? '';
-
-                  final iPaidAndTheyOwe = paidBy == currentUser.uid && splits.containsKey(friend.id);
-                  final theyPaidAndIOwe = paidBy == friend.id && splits.containsKey(currentUser.uid);
-
-                  return iPaidAndTheyOwe || theyPaidAndIOwe;
-                }).toList();
+                final friendExpenses = _filterBilateralExpenses(docs, currentUser.uid, friend.id);
 
                 if (friendExpenses.isEmpty) {
                   return _EmptyExpensesState(
