@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
+import '../../router/app_router.dart';
 
 class SettleUpScreen extends StatefulWidget {
   final String groupId;
@@ -192,16 +193,14 @@ class _SettleUpScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.popUntil(
-                  ctx,
-                  (route) =>
-                      route.settings.name ==
-                          '/group-detail' ||
-                      route.settings.name ==
-                          '/main' ||
-                      route.isFirst,
-                ),
-                child: const Text('Done'),
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    ctx,
+                    AppRoutes.main,
+                    (route) => false,
+                  );
+                },
+                child: const Text('Back to home'),
               ),
             ),
           ],

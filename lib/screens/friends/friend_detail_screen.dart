@@ -155,9 +155,9 @@ class _FriendHeader extends StatelessWidget {
       final amt = (data['amount'] as num).toDouble();
 
       if (fromId == currentUserId && toId == friend.id) {
-        balance -= amt;
-      } else if (fromId == friend.id && toId == currentUserId) {
         balance += amt;
+      } else if (fromId == friend.id && toId == currentUserId) {
+        balance -= amt;
       }
     }
 
@@ -351,9 +351,9 @@ class _SettleUpBar extends StatelessWidget {
       final amt = (data['amount'] as num).toDouble();
 
       if (fromId == currentUserId && toId == friend.id) {
-        balance -= amt;
-      } else if (fromId == friend.id && toId == currentUserId) {
         balance += amt;
+      } else if (fromId == friend.id && toId == currentUserId) {
+        balance -= amt;
       }
     }
 

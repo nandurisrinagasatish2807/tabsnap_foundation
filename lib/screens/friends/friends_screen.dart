@@ -49,35 +49,44 @@ class FriendsScreen extends StatelessWidget {
                 stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(currentUser.uid)
-                    .collection('friends')
+                    .collection('activities')
                     .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.accent),
-                    );
-                  }
+                builder: (context, activitySnap) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(currentUser.uid)
+                        .collection('friends')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: AppColors.accent),
+                        );
+                      }
 
-                  final docs = snapshot.data?.docs ?? [];
+                      final docs = snapshot.data?.docs ?? [];
 
-                  if (docs.isEmpty) {
-                    return _EmptyFriendsState(
-                      onAddFriend: () => _showAddFriendSheet(context),
-                    );
-                  }
+                      if (docs.isEmpty) {
+                        return _EmptyFriendsState(
+                          onAddFriend: () => _showAddFriendSheet(context),
+                        );
+                      }
 
-                  final friends =
-                      docs.map((d) => Friend.fromFirestore(d)).toList();
+                      final friends =
+                          docs.map((d) => Friend.fromFirestore(d)).toList();
 
-                  return ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: friends.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemBuilder: (context, i) => _FriendTile(
-                      friend: friends[i],
-                      currentUserId: currentUser.uid,
-                    ),
+                      return ListView.separated(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: friends.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 4),
+                        itemBuilder: (context, i) => _FriendTile(
+                          friend: friends[i],
+                          currentUserId: currentUser.uid,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -207,9 +216,9 @@ class _FriendTile extends StatelessWidget {
       final amt = (data['amount'] as num).toDouble();
 
       if (fromId == currentUserId && toId == friend.id) {
-        balance -= amt;
-      } else if (fromId == friend.id && toId == currentUserId) {
         balance += amt;
+      } else if (fromId == friend.id && toId == currentUserId) {
+        balance -= amt;
       }
     }
 
