@@ -58,12 +58,16 @@ class FriendDetailScreen extends StatelessWidget {
 
                 final docs = snapshot.data?.docs ?? [];
 
-                // Filter only expenses involving this friend
+                // Filter only expenses involving direct debts between me and this friend
                 final friendExpenses = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final splits =
-                      Map<String, dynamic>.from(data['splits'] ?? {});
-                  return splits.containsKey(friend.id);
+                  final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+                  final paidBy = data['paidById'] as String? ?? '';
+
+                  final iPaidAndTheyOwe = paidBy == currentUser.uid && splits.containsKey(friend.id);
+                  final theyPaidAndIOwe = paidBy == friend.id && splits.containsKey(currentUser.uid);
+
+                  return iPaidAndTheyOwe || theyPaidAndIOwe;
                 }).toList();
 
                 if (friendExpenses.isEmpty) {
@@ -83,7 +87,12 @@ class FriendDetailScreen extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final expense = Expense.fromFirestore(friendExpenses[i]);
                     final paidByMe = expense.paidById == currentUser.uid;
-                    final amount = expense.splits[friend.id] ?? 0.0;
+                    
+                    // If I paid, the amount lent is their split. 
+                    // If they paid, the amount borrowed is my split.
+                    final amount = paidByMe 
+                        ? (expense.splits[friend.id] ?? 0.0) 
+                        : (expense.splits[currentUser.uid] ?? 0.0);
 
                     return _ExpenseTile(
                       expense: expense,
