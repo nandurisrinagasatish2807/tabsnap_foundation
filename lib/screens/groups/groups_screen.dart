@@ -22,65 +22,56 @@ class GroupsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  24, 24, 24, 0),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Groups',
-                      style: AppTextStyles.displayMedium),
+                  Text('Groups', style: AppTextStyles.displayMedium),
                   IconButton(
-                    onPressed: () =>
-                        _showCreateGroupSheet(
-                            context, currentUser.uid),
+                    onPressed: () => _showCreateGroupSheet(context, currentUser.uid),
                     icon: const Icon(
-                        Icons.group_add_outlined,
-                        color: AppColors.accent),
+                      Icons.group_add_outlined,
+                      color: AppColors.accent,
+                    ),
                   ),
                 ],
               ),
             ),
             
-            // ── Overall balance card ───────────────────────────────
             OverallBalanceCard(userId: currentUser.uid),
 
             const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
+                // FIX 1: Querying the ROOT groups collection for shared access
                 stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(currentUser.uid)
                     .collection('groups')
+                    .where('memberIds', arrayContains: currentUser.uid)
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState ==
-                      ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.accent),
+                      child: CircularProgressIndicator(color: AppColors.accent),
                     );
                   }
-                  final docs =
-                      snapshot.data?.docs ?? [];
+                  
+                  final docs = snapshot.data?.docs ?? [];
                   if (docs.isEmpty) {
                     return _EmptyGroupsState(
-                      onCreateGroup: () =>
-                          _showCreateGroupSheet(context,
-                              currentUser.uid),
+                      onCreateGroup: () => _showCreateGroupSheet(context, currentUser.uid),
                     );
                   }
-                  final groups = docs
-                      .map((d) => Group.fromFirestore(d))
-                      .toList();
+                  
+                  final groups = docs.map((d) => Group.fromFirestore(d)).toList();
+                  
                   return ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: groups.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (context, i) =>
-                        _GroupTile(group: groups[i], currentUserId: currentUser.uid),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) => _GroupTile(
+                      group: groups[i], 
+                      currentUserId: currentUser.uid,
+                    ),
                   );
                 },
               ),
@@ -91,23 +82,17 @@ class GroupsScreen extends StatelessWidget {
     );
   }
 
-  void _showCreateGroupSheet(
-      BuildContext context, String userId) {
+  void _showCreateGroupSheet(BuildContext context, String userId) {
     final nameController = TextEditingController();
     String selectedEmoji = '🏠';
-    final emojis = [
-      '🏠', '✈️', '🍕', '🎉', '💼',
-      '🎮', '🏋️', '🛒', '🎓', '❤️',
-      '🌴', '🎵', '🏖️', '🍻', '🏡',
-    ];
+    final emojis = ['🏠', '✈️', '🍕', '🎉', '💼', '🎮', '🏋️', '🛒', '🎓', '❤️', '🌴', '🎵', '🏖️', '🍻', '🏡'];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
@@ -119,96 +104,64 @@ class GroupsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create group',
-                  style: AppTextStyles.titleLarge),
+              Text('Create group', style: AppTextStyles.titleLarge),
               const SizedBox(height: 4),
-              Text(
-                  'You can add members after creating.',
-                  style: AppTextStyles.bodySmall),
+              Text('You can add members after creating.', style: AppTextStyles.bodySmall),
               const SizedBox(height: 20),
 
-              // Emoji picker
-              Text('Pick an emoji',
-                  style: AppTextStyles.titleSmall),
+              Text('Pick an emoji', style: AppTextStyles.titleSmall),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: emojis.map((emoji) {
-                  final isSelected =
-                      selectedEmoji == emoji;
+                  final isSelected = selectedEmoji == emoji;
                   return GestureDetector(
-                    onTap: () => setModalState(
-                        () => selectedEmoji = emoji),
+                    onTap: () => setModalState(() => selectedEmoji = emoji),
                     child: Container(
-                      width: 44,
-                      height: 44,
+                      width: 44, height: 44,
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accent
-                                .withValues(alpha: 0.15)
-                            : AppColors.surfaceAlt,
+                        color: isSelected ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surfaceAlt,
                         borderRadius: AppRadius.sm,
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accent
-                              : AppColors.border,
-                        ),
+                        border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
                       ),
-                      child: Center(
-                        child: Text(emoji,
-                            style: const TextStyle(
-                                fontSize: 22)),
-                      ),
+                      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
                     ),
                   );
                 }).toList(),
               ),
 
               const SizedBox(height: 16),
-
-              Text('Group name',
-                  style: AppTextStyles.titleSmall),
+              Text('Group name', style: AppTextStyles.titleSmall),
               const SizedBox(height: 8),
               TextFormField(
                 controller: nameController,
-                textCapitalization:
-                    TextCapitalization.words,
+                textCapitalization: TextCapitalization.words,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText:
-                      'e.g. Apt 7777, Dallas Trip',
-                ),
+                decoration: const InputDecoration(hintText: 'e.g. Apt 7777, Dallas Trip'),
               ),
 
               const SizedBox(height: 20),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final name =
-                        nameController.text.trim();
+                    final name = nameController.text.trim();
                     if (name.isEmpty) return;
 
-                    // Create the group
-                    final doc = await FirebaseFirestore
-                        .instance
-                        .collection('users')
-                        .doc(userId)
+                    // FIX 2: Saving to ROOT collection so others can find it
+                    final doc = await FirebaseFirestore.instance
                         .collection('groups')
                         .add({
                       'name': name,
                       'emoji': selectedEmoji,
                       'memberIds': [userId],
                       'notes': '',
-                      'createdAt': DateTime.now(),
+                      'createdAt': FieldValue.serverTimestamp(),
                     });
 
                     if (context.mounted) {
                       Navigator.pop(context);
-                      // Go straight to group detail
-                      // so user can add members
                       final group = Group(
                         id: doc.id,
                         name: name,
@@ -216,11 +169,7 @@ class GroupsScreen extends StatelessWidget {
                         memberIds: [userId],
                         createdAt: DateTime.now(),
                       );
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.groupDetail,
-                        arguments: group,
-                      );
+                      Navigator.pushNamed(context, AppRoutes.groupDetail, arguments: group);
                     }
                   },
                   child: const Text('Create group'),
@@ -241,9 +190,9 @@ class _GroupTile extends StatelessWidget {
 
   Future<(double, String?)> _fetchGroupState() async {
     final uid = currentUserId;
-    
-    // 1. Calculate Balance
     double balance = 0;
+    
+    // FIX 3: Using the global Group ID to find matching local expenses
     final expenses = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -282,14 +231,13 @@ class _GroupTile extends StatelessWidget {
       final toId = data['toId'] as String? ?? '';
       final amt = (data['amount'] as num).toDouble();
 
-      if (fromId == uid) { // I paid someone
+      if (fromId == uid) { 
         balance += amt;
-      } else if (toId == uid) { // Someone paid me
+      } else if (toId == uid) { 
         balance -= amt;
       }
     }
 
-    // 2. Fetch Last Activity
     String? lastActivity;
     final activities = await FirebaseFirestore.instance
         .collection('users')
@@ -312,17 +260,17 @@ class _GroupTile extends StatelessWidget {
     return FutureBuilder<(double, String?)>(
       future: _fetchGroupState(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(height: 82);
+        }
+
         final balance = snapshot.data?.$1 ?? 0.0;
         final lastActivity = snapshot.data?.$2;
         final isPositive = balance > 0;
         final isZero = balance.abs() < 0.01;
 
         return GestureDetector(
-          onTap: () => Navigator.pushNamed(
-            context,
-            AppRoutes.groupDetail,
-            arguments: group,
-          ),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.groupDetail, arguments: group),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -333,15 +281,12 @@ class _GroupTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 48, height: 48,
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.1),
                     borderRadius: AppRadius.sm,
                   ),
-                  child: Center(
-                    child: Text(group.emoji, style: const TextStyle(fontSize: 24)),
-                  ),
+                  child: Center(child: Text(group.emoji, style: const TextStyle(fontSize: 24))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -373,18 +318,11 @@ class _GroupTile extends StatelessWidget {
                     Text(
                       isZero ? 'Settled' : '\$${balance.abs().toStringAsFixed(2)}',
                       style: AppTextStyles.titleSmall.copyWith(
-                        color: isZero
-                            ? AppColors.textHint
-                            : isPositive
-                                ? AppColors.success
-                                : AppColors.danger,
+                        color: isZero ? AppColors.textHint : isPositive ? AppColors.success : AppColors.danger,
                       ),
                     ),
                     if (!isZero)
-                      Text(
-                        isPositive ? 'you are owed' : 'you owe',
-                        style: AppTextStyles.bodySmall,
-                      ),
+                      Text(isPositive ? 'you are owed' : 'you owe', style: AppTextStyles.bodySmall),
                   ],
                 ),
                 const SizedBox(width: 4),
@@ -400,8 +338,7 @@ class _GroupTile extends StatelessWidget {
 
 class _EmptyGroupsState extends StatelessWidget {
   final VoidCallback onCreateGroup;
-  const _EmptyGroupsState(
-      {required this.onCreateGroup});
+  const _EmptyGroupsState({required this.onCreateGroup});
 
   @override
   Widget build(BuildContext context) {
@@ -412,33 +349,25 @@ class _EmptyGroupsState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 80, height: 80,
               decoration: BoxDecoration(
-                color:
-                    AppColors.accent.withValues(alpha: 0.1),
+                color: AppColors.accent.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.group_outlined,
-                  color: AppColors.accent, size: 36),
+              child: const Icon(Icons.group_outlined, color: AppColors.accent, size: 36),
             ),
             const SizedBox(height: 20),
-            Text('No groups yet',
-                style: AppTextStyles.titleMedium),
+            Text('No groups yet', style: AppTextStyles.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Create a group for roommates,\ntrips, or regular hangouts.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: onCreateGroup,
-              icon: const Icon(
-                  Icons.group_add_outlined,
-                  size: 18),
+              icon: const Icon(Icons.group_add_outlined, size: 18),
               label: const Text('Create a group'),
             ),
           ],
