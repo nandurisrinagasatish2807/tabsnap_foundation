@@ -14,7 +14,11 @@ class FriendDetailScreen extends StatelessWidget {
       List<QueryDocumentSnapshot> docs, String currentUserId, String friendId) {
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final creatorId = data['creatorId']?.toString() ?? data['sharedBy']?.toString() ?? currentUserId;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
+      
       final paidBy = data['paidById']?.toString() ?? '';
 
       final iPaidAndTheyOwe = paidBy == currentUserId && splits.containsKey(friendId);
@@ -141,7 +145,11 @@ class _FriendHeader extends StatelessWidget {
 
     for (final doc in expenses.docs) {
       final data = doc.data();
-      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? currentUserId;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
+
       final paidBy = data['paidById'] as String? ?? '';
 
       if (paidBy == currentUserId) {
@@ -337,7 +345,11 @@ class _SettleUpBar extends StatelessWidget {
 
     for (final doc in expenses.docs) {
       final data = doc.data();
-      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? currentUserId;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
+
       final paidBy = data['paidById'] as String? ?? '';
 
       if (paidBy == currentUserId) {

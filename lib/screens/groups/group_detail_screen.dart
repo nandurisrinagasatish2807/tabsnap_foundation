@@ -102,10 +102,12 @@ class _GroupDetailScreenState
 
     for (final doc in expenses.docs) {
       final data = doc.data();
-      final splits = Map<String, dynamic>.from(
-          data['splits'] ?? {});
-      final paidBy =
-          data['paidById'] as String? ?? '';
+      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? uid;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
+
+      final paidBy = data['paidById'] as String? ?? '';
 
       splits.forEach((memberId, amount) {
         if (memberId == uid) return;

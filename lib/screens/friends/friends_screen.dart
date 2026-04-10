@@ -189,7 +189,11 @@ class _FriendTile extends StatelessWidget {
 
     for (final doc in expenses.docs) {
       final data = doc.data();
-      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? currentUserId;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
+
       final paidBy = data['paidById'] as String? ?? '';
 
       if (paidBy == currentUserId) {

@@ -89,14 +89,22 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
         paidById = _paidBy.id;
       }
 
+      // ── MAPPING "me" to the real UID ──────
+      final normalizedSplits = <String, double>{};
+      splits.forEach((k, v) {
+        final key = k == 'me' ? currentUser.uid : k;
+        normalizedSplits[key] = v;
+      });
+
       final expenseData = {
         'title': _generateTitle(),
         'total': _total,
         'paidById': paidById, // ← correct payer
         'items': widget.items.map((i) => i.toMap()).toList(),
-        'splits': splits,
+        'splits': normalizedSplits, // ← no more 'me' keys!
         'groupId': widget.groupId, // ← group link
         'createdAt': DateTime.now(),
+        'creatorId': currentUser.uid, // Add creator id for future reference
       };
 
       // ── Save to current user's path ───────────────────
