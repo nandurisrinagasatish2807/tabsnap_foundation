@@ -18,23 +18,26 @@ class OverallBalanceCard extends StatelessWidget {
     for (final doc in expenses.docs) {
       final data = doc.data();
       final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
-      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? userId;
-      final splits = <String, dynamic>{};
-      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
-      
       final paidBy = data['paidById'] as String? ?? '';
-
-      splits.forEach((friendId, amount) {
-        if (friendId == userId) return;
-        final amt = (amount as num).toDouble();
-        if (paidBy == userId) {
-          netBalances[friendId] = (netBalances[friendId] ?? 0) + amt;
-        }
-      });
+      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? userId);
       
-      if (paidBy != userId && splits.containsKey(userId)) {
-        final myAmt = (splits[userId] as num).toDouble();
-        netBalances[paidBy] = (netBalances[paidBy] ?? 0) - myAmt;
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
+
+      if (paidBy == userId) {
+        // Rule 1: User as Payer - they are owed by each other member for their share
+        splits.forEach((friendId, amount) {
+          if (friendId != userId) {
+            final amt = double.parse(((amount as num).toDouble()).toStringAsFixed(2));
+            netBalances[friendId] = double.parse(((netBalances[friendId] ?? 0) + amt).toStringAsFixed(2));
+          }
+        });
+      } else {
+        // Rule 2: User as Participant - they owe the payer for their specific share
+        if (splits.containsKey(userId)) {
+          final myAmt = double.parse(((splits[userId] as num).toDouble()).toStringAsFixed(2));
+          netBalances[paidBy] = double.parse(((netBalances[paidBy] ?? 0) - myAmt).toStringAsFixed(2));
+        }
       }
     }
 

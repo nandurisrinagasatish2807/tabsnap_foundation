@@ -103,26 +103,23 @@ class _GroupDetailScreenState
     for (final doc in expenses.docs) {
       final data = doc.data();
       final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
-      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? uid;
-      final splits = <String, dynamic>{};
-      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
-
       final paidBy = data['paidById'] as String? ?? '';
+      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? uid);
+      
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
 
       splits.forEach((memberId, amount) {
         if (memberId == uid) return;
-        final amt = (amount as num).toDouble();
+        final amt = double.parse(((amount as num).toDouble()).toStringAsFixed(2));
         if (paidBy == uid) {
-          raw[memberId] =
-              (raw[memberId] ?? 0) + amt;
+          raw[memberId] = double.parse(((raw[memberId] ?? 0) + amt).toStringAsFixed(2));
         }
       });
 
-      if (paidBy != uid &&
-          splits.containsKey(uid)) {
-        final myShare =
-            (splits[uid] as num).toDouble();
-        raw[paidBy] = (raw[paidBy] ?? 0) - myShare;
+      if (paidBy != uid && splits.containsKey(uid)) {
+        final myShare = double.parse(((splits[uid] as num).toDouble()).toStringAsFixed(2));
+        raw[paidBy] = double.parse(((raw[paidBy] ?? 0) - myShare).toStringAsFixed(2));
       }
     }
 

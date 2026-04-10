@@ -202,23 +202,25 @@ class _GroupTile extends StatelessWidget {
 
     for (final doc in expenses.docs) {
       final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
-      final creatorId = data['creatorId'] ?? data['sharedBy'] ?? uid;
-      final splits = <String, dynamic>{};
-      rawSplits.forEach((k, v) => splits[k == 'me' ? creatorId : k] = v);
-
       final paidBy = data['paidById'] as String? ?? '';
+      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? uid);
+      
+      final splits = <String, dynamic>{};
+      rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
       
       double expenseNet = 0;
       if (paidBy == uid) {
         splits.forEach((k, v) {
-          if (k != uid) expenseNet += (v as num).toDouble();
+          if (k != uid) {
+             expenseNet += double.parse(((v as num).toDouble()).toStringAsFixed(2));
+          }
         });
       } else {
         if (splits.containsKey(uid)) {
-          expenseNet -= (splits[uid] as num).toDouble();
+          expenseNet -= double.parse(((splits[uid] as num).toDouble()).toStringAsFixed(2));
         }
       }
-      balance += expenseNet;
+      balance = double.parse((balance + expenseNet).toStringAsFixed(2));
     }
 
     final settlements = await FirebaseFirestore.instance
