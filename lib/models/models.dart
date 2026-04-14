@@ -2,44 +2,55 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
-class AppUser {
-  final String id;
-  final String name;
+class UserModel {
+  final String uid;
+  final String fullName;
   final String email;
-  final String? photoUrl;
+  final String handle;
+  final String? qrValue;
   final DateTime createdAt;
 
-  const AppUser({
-    required this.id,
-    required this.name,
+  const UserModel({
+    required this.uid,
+    required this.fullName,
     required this.email,
-    this.photoUrl,
+    required this.handle,
+    this.qrValue,
     required this.createdAt,
   });
 
-  factory AppUser.fromFirestore(DocumentSnapshot doc) {
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
-    return AppUser(
-      id: doc.id,
-      name: d['name'] ?? '',
+    return UserModel(
+      uid: doc.id,
+      fullName: d['fullName'] ?? '',
       email: d['email'] ?? '',
-      photoUrl: d['photoUrl'],
+      handle: d['handle'] ?? '',
+      qrValue: d['qrValue'],
       createdAt: (d['createdAt'] as Timestamp).toDate(),
     );
   }
 
   Map<String, dynamic> toFirestore() => {
-        'name': name,
+        'fullName': fullName,
         'email': email,
-        'photoUrl': photoUrl,
+        'handle': handle,
+        'qrValue': qrValue,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 
-  AppUser copyWith({String? name, String? email, String? photoUrl}) => AppUser(
-        id: id,
-        name: name ?? this.name,
+  UserModel copyWith({
+    String? fullName,
+    String? email,
+    String? handle,
+    String? qrValue,
+  }) =>
+      UserModel(
+        uid: uid,
+        fullName: fullName ?? this.fullName,
         email: email ?? this.email,
-        photoUrl: photoUrl ?? this.photoUrl,
+        handle: handle ?? this.handle,
+        qrValue: qrValue ?? this.qrValue,
         createdAt: createdAt,
       );
 }
@@ -52,6 +63,9 @@ class Friend {
   final String? email;
   final int colorIndex;
   final bool isTemporary; // No app account needed
+  final String? handle;
+  final String? photoUrl;
+  final String status;
 
   const Friend({
     required this.id,
@@ -59,6 +73,9 @@ class Friend {
     this.email,
     required this.colorIndex,
     this.isTemporary = false,
+    this.handle,
+    this.photoUrl,
+    this.status = 'accepted',
   });
 
   factory Friend.fromFirestore(DocumentSnapshot doc) {
@@ -69,6 +86,9 @@ class Friend {
       email: d['email'],
       colorIndex: d['colorIndex'] ?? 0,
       isTemporary: d['isTemporary'] ?? false,
+      handle: d['handle'],
+      photoUrl: d['photoUrl'],
+      status: d['status'] ?? 'accepted',
     );
   }
 
@@ -77,6 +97,9 @@ class Friend {
         'email': email,
         'colorIndex': colorIndex,
         'isTemporary': isTemporary,
+        'handle': handle,
+        'photoUrl': photoUrl,
+        'status': status,
       };
 
   String get initials {

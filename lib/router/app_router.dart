@@ -5,7 +5,9 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/main/main_shell.dart';
 import '../screens/friends/friend_detail_screen.dart';
+import '../screens/friends/qr_scanner_screen.dart'; // Added
 import '../screens/groups/group_detail_screen.dart'; // Ensure you create this file
+import '../screens/groups/create_group_screen.dart'; // Added
 import '../screens/expense/choose_people_screen.dart';
 import '../screens/expense/camera_screen.dart';
 import '../screens/expense/review_items_screen.dart';
@@ -14,12 +16,16 @@ import '../screens/expense/split_summary_screen.dart';
 import '../screens/expense/expense_detail_screen.dart'; // Added
 import '../screens/settle/settle_up_screen.dart';
 import '../models/models.dart';
+import '../screens/auth/auth_wrapper.dart'; // Added
 
 class AppRoutes {
   AppRoutes._();
+  static const root = '/';
   static const login = '/login';
   static const signup = '/signup';
   static const main = '/main';
+  static const qrScanner = '/qr-scanner'; // Added
+  static const createGroup = '/create-group'; // Added
   static const friendDetail = '/friend-detail';
   static const groupDetail = '/group-detail'; // Added
   static const choosePeople = '/expense/choose-people';
@@ -37,12 +43,20 @@ class AppRouter {
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case AppRoutes.root:
+        return _fade(const AuthWrapper());
       case AppRoutes.login:
         return _fade(const LoginScreen());
       case AppRoutes.signup:
         return _slide(const SignupScreen());
       case AppRoutes.main:
         return _fade(const MainShell());
+
+      case AppRoutes.qrScanner: // Added
+        return _slide(const QRScannerScreen());
+
+      case AppRoutes.createGroup: // Added
+        return _slide(const CreateGroupScreen());
 
       case AppRoutes.friendDetail:
         final friend = settings.arguments as Friend;
@@ -113,8 +127,7 @@ class AppRouter {
   }
 
   static String get initialRoute {
-    final user = FirebaseAuth.instance.currentUser;
-    return user != null ? AppRoutes.main : AppRoutes.login;
+    return AppRoutes.root;
   }
 
   static PageRoute<T> _fade<T>(Widget page) => PageRouteBuilder<T>(

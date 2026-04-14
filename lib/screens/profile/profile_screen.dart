@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../utils/constants.dart';
 import '../../router/app_router.dart';
 
@@ -106,6 +107,11 @@ class ProfileScreen extends StatelessWidget {
               const Text('Settings', style: AppTextStyles.titleSmall),
               const SizedBox(height: 12),
               _SettingsTile(
+                icon: Icons.qr_code,
+                label: 'Show My QR',
+                onTap: () => _showMyQR(context, currentUser.uid),
+              ),
+              _SettingsTile(
                 icon: Icons.notifications_outlined,
                 label: 'Notifications',
                 onTap: () {},
@@ -152,6 +158,56 @@ class ProfileScreen extends StatelessWidget {
                 child: Text(
                   'TabSnap v1.0.0',
                   style: AppTextStyles.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMyQR(BuildContext context, String uid) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('My QR Code', style: AppTextStyles.titleLarge),
+              const SizedBox(height: 8),
+              const Text(
+                'Other users can scan this to add you as a friend.',
+                style: AppTextStyles.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: AppRadius.lg,
+                  border: Border.all(color: const Color(0xFF00C853), width: 3), // Emerald
+                ),
+                child: QrImageView(
+                  data: 'tabsnap://user/$uid',
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  foregroundColor: AppColors.primary, // Navy
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
                 ),
               ),
             ],

@@ -28,7 +28,7 @@ class GroupsScreen extends StatelessWidget {
                 children: [
                   Text('Groups', style: AppTextStyles.displayMedium),
                   IconButton(
-                    onPressed: () => _showCreateGroupSheet(context, currentUser.uid),
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.createGroup),
                     icon: const Icon(
                       Icons.group_add_outlined,
                       color: AppColors.accent,
@@ -58,7 +58,7 @@ class GroupsScreen extends StatelessWidget {
                   final docs = snapshot.data?.docs ?? [];
                   if (docs.isEmpty) {
                     return _EmptyGroupsState(
-                      onCreateGroup: () => _showCreateGroupSheet(context, currentUser.uid),
+                      onCreateGroup: () => Navigator.pushNamed(context, AppRoutes.createGroup),
                     );
                   }
                   
@@ -82,105 +82,7 @@ class GroupsScreen extends StatelessWidget {
     );
   }
 
-  void _showCreateGroupSheet(BuildContext context, String userId) {
-    final nameController = TextEditingController();
-    String selectedEmoji = '🏠';
-    final emojis = ['🏠', '✈️', '🍕', '🎉', '💼', '🎮', '🏋️', '🛒', '🎓', '❤️', '🌴', '🎵', '🏖️', '🍻', '🏡'];
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            24, 24, 24,
-            MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Create group', style: AppTextStyles.titleLarge),
-              const SizedBox(height: 4),
-              Text('You can add members after creating.', style: AppTextStyles.bodySmall),
-              const SizedBox(height: 20),
-
-              Text('Pick an emoji', style: AppTextStyles.titleSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: emojis.map((emoji) {
-                  final isSelected = selectedEmoji == emoji;
-                  return GestureDetector(
-                    onTap: () => setModalState(() => selectedEmoji = emoji),
-                    child: Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surfaceAlt,
-                        borderRadius: AppRadius.sm,
-                        border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
-                      ),
-                      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 16),
-              Text('Group name', style: AppTextStyles.titleSmall),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: nameController,
-                textCapitalization: TextCapitalization.words,
-                autofocus: true,
-                decoration: const InputDecoration(hintText: 'e.g. Apt 7777, Dallas Trip'),
-              ),
-
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-
-                    // FIX 2: Saving to ROOT collection so others can find it
-                    final doc = await FirebaseFirestore.instance
-                        .collection('groups')
-                        .add({
-                      'name': name,
-                      'emoji': selectedEmoji,
-                      'memberIds': [userId],
-                      'notes': '',
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      final group = Group(
-                        id: doc.id,
-                        name: name,
-                        emoji: selectedEmoji,
-                        memberIds: [userId],
-                        createdAt: DateTime.now(),
-                      );
-                      Navigator.pushNamed(context, AppRoutes.groupDetail, arguments: group);
-                    }
-                  },
-                  child: const Text('Create group'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _GroupTile extends StatelessWidget {
@@ -192,7 +94,7 @@ class _GroupTile extends StatelessWidget {
     final uid = currentUserId;
     double balance = 0;
     
-    // FIX 3: Using the global Group ID to find matching local expenses
+    // 1. Calculate Balance
     final expenses = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -201,28 +103,35 @@ class _GroupTile extends StatelessWidget {
         .get();
 
     for (final doc in expenses.docs) {
+      // ✅ FIX: This line was missing!
+      final data = doc.data(); 
+      
       final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
       final paidBy = data['paidById'] as String? ?? '';
-      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? uid);
       
+      // Normalization logic
+      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? uid);
       final splits = <String, dynamic>{};
       rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
-      
-      double expenseNet = 0;
+
       if (paidBy == uid) {
+        // You paid: others owe you
         splits.forEach((k, v) {
           if (k != uid) {
-             expenseNet += double.parse(((v as num).toDouble()).toStringAsFixed(2));
+            final amt = double.parse((v as num).toDouble().toStringAsFixed(2));
+            balance = double.parse((balance + amt).toStringAsFixed(2));
           }
         });
       } else {
+        // Someone else paid: you owe them
         if (splits.containsKey(uid)) {
-          expenseNet -= double.parse(((splits[uid] as num).toDouble()).toStringAsFixed(2));
+          final amt = double.parse((splits[uid] as num).toDouble().toStringAsFixed(2));
+          balance = double.parse((balance - amt).toStringAsFixed(2));
         }
       }
-      balance = double.parse((balance + expenseNet).toStringAsFixed(2));
     }
 
+    // 2. Settlements
     final settlements = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -231,18 +140,19 @@ class _GroupTile extends StatelessWidget {
         .get();
 
     for (final doc in settlements.docs) {
-      final data = doc.data();
+      // ✅ FIX: Adding the data declaration here too for safety
+      final data = doc.data(); 
       final fromId = data['fromId'] as String? ?? '';
-      final toId = data['toId'] as String? ?? '';
       final amt = (data['amount'] as num).toDouble();
 
       if (fromId == uid) { 
-        balance += amt;
-      } else if (toId == uid) { 
-        balance -= amt;
+        balance = double.parse((balance + amt).toStringAsFixed(2));
+      } else { 
+        balance = double.parse((balance - amt).toStringAsFixed(2));
       }
     }
 
+    // 3. Fetch Last Activity
     String? lastActivity;
     final activities = await FirebaseFirestore.instance
         .collection('users')

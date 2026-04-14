@@ -46,20 +46,21 @@ class _SignupScreenState extends State<SignupScreen> {
         password: _passwordController.text.trim(),
       );
 
-      final user = AppUser(
-        id: credential.user!.uid,
-        name: _nameController.text.trim(),
+      final user = UserModel(
+        uid: credential.user!.uid,
+        fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        handle: '', // Handled in ProfileSetupScreen
         createdAt: DateTime.now(),
       );
 
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.id)
+          .doc(user.uid)
           .set(user.toFirestore());
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.main);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.root, (route) => false);
       }
     } on FirebaseAuthException catch (e) {
       setState(() {

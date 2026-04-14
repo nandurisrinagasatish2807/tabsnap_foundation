@@ -6,6 +6,7 @@ import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
 import '../../widgets/overall_balance_card.dart';
+import '../../services/social_service.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
@@ -28,10 +29,17 @@ class FriendsScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Friends', style: AppTextStyles.displayMedium),
-                  IconButton(
-                    onPressed: () => _showAddFriendSheet(context),
-                    icon: const Icon(Icons.person_add_outlined,
-                        color: AppColors.accent),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.qrScanner),
+                        icon: const Icon(Icons.qr_code_scanner, color: AppColors.accent),
+                      ),
+                      IconButton(
+                        onPressed: () => _showAddFriendSheet(context),
+                        icon: const Icon(Icons.person_add_outlined, color: AppColors.accent),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -284,25 +292,65 @@ class _FriendTile extends StatelessWidget {
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      isZero
-                          ? 'settled'
-                          : '\$${balance.abs().toStringAsFixed(2)}',
-                      style: AppTextStyles.titleSmall.copyWith(
-                        color: isZero
-                            ? AppColors.textHint
-                            : isPositive
-                                ? AppColors.success
-                                : AppColors.danger,
-                      ),
-                    ),
-                    if (!isZero)
-                      Text(
-                        isPositive ? 'owes you' : 'you owe',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                  ],
+                  children: friend.status == 'pending_received'
+                      ? [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () => SocialService.acceptFriendRequest(friend.id),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00C853), // Emerald
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Text('Accept', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => SocialService.declineFriendRequest(friend.id),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF7F50), // Coral
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Text('Decline', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ]
+                      : friend.status == 'pending_sent'
+                          ? [
+                              Text(
+                                'Pending',
+                                style: AppTextStyles.titleSmall.copyWith(
+                                  color: AppColors.warning,
+                                ),
+                              ),
+                            ]
+                      : [
+                          Text(
+                            isZero
+                                ? 'settled'
+                                : '\$${balance.abs().toStringAsFixed(2)}',
+                            style: AppTextStyles.titleSmall.copyWith(
+                              color: isZero
+                                  ? AppColors.textHint
+                                  : isPositive
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                            ),
+                          ),
+                          if (!isZero)
+                            Text(
+                              isPositive ? 'owes you' : 'you owe',
+                              style: AppTextStyles.bodySmall,
+                            ),
+                        ],
                 ),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right,

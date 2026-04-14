@@ -6,7 +6,7 @@ class AppColors {
   AppColors._();
 
   // Brand
-  static const primary = Color(0xFF1A1A2E);
+  static const primary = Color(0xFF1A237E); // Primary Navy
   static const accent = Color(0xFFE8633A);
   static const accentAlt = Color(0xFFFF8C5A);
 
@@ -176,10 +176,10 @@ class AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accent,
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(52),
-            shape: const RoundedRectangleBorder(borderRadius: AppRadius.md),
+            shape: const RoundedRectangleBorder(borderRadius: AppRadius.xl),
             textStyle: AppTextStyles.titleSmall,
             elevation: 0,
           ),
