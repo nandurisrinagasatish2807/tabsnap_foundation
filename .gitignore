@@ -29,3 +29,6 @@ Pods/
 .idea/
 .vscode/
 *.iml
+# Personal/Auto-generated logs
+*.log
+android/.kotlin/
