@@ -36,6 +36,7 @@ class AppRoutes {
   static const settleUp = '/settle-up';
   static const expenseDetail = '/expense-detail';
   static const settlementDetail = '/settlement-detail';
+  static const friends = '/friends';
 }
 
 class AppRouter {

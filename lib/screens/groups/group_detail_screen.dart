@@ -261,9 +261,9 @@ class _GroupDetailScreenState
           ],
         ),
       ),
-      ),
-    );
-  }
+      );
+    
+}
 
   void _showSettleUpSheet() {
     final netBalances = _netBalances ?? {};
@@ -966,7 +966,6 @@ class _SectionedFeed extends StatelessWidget {
           itemCount: items.length,
           itemBuilder: (context, i) {
             final item = items[i];
-
             if (item is String) {
               return Container(
                 padding: const EdgeInsets.fromLTRB(
