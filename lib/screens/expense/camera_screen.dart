@@ -143,7 +143,7 @@ class _CameraScreenState extends State<CameraScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Scan failed. Try manual entry.'),
+            content: Text('Could not read receipt. Please try again or add items manually.'),
             behavior: SnackBarBehavior.floating,
           ),
         );

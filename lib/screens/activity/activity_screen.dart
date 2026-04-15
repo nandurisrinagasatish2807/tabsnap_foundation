@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
+import '../../router/app_router.dart';
 
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
@@ -25,9 +26,8 @@ class ActivityScreen extends StatelessWidget {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(currentUser.uid)
-                    .collection('activities')
+                    .collectionGroup('activities')
+                    .where('involvedUsers', arrayContains: currentUser.uid)
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -66,6 +66,17 @@ class ActivityScreen extends StatelessWidget {
                                 color: AppColors.textSecondary,
                               ),
                               textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pushReplacementNamed(
+                                context,
+                                AppRoutes.friends,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                              ),
+                              child: const Text('Get Started'),
                             ),
                           ],
                         ),

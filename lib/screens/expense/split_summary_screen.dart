@@ -137,11 +137,24 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
       }
 
       // ── Log to activity feed ──────────────────────────
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('activities')
-          .add({
+      final involvedUsers = normalizedSplits.keys.toList();
+      if (!involvedUsers.contains(paidById)) {
+        involvedUsers.add(paidById);
+      }
+
+      final activityRef = widget.groupId != null
+          ? FirebaseFirestore.instance
+              .collection('groups')
+              .doc(widget.groupId)
+              .collection('activities')
+              .doc()
+          : FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .collection('activities')
+              .doc();
+
+      await activityRef.set({
         'type': 'expense',
         'description':
             'Added "${_generateTitle()}" — \$${_total.toStringAsFixed(2)}',
@@ -149,6 +162,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
         'groupId': widget.groupId,
         'creatorId': currentUser.uid,
         'relatedId': myExpenseRef.id,
+        'involvedUsers': involvedUsers,
         'createdAt': DateTime.now(),
       });
 

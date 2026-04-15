@@ -95,5 +95,76 @@ class SocialService {
 
     await batch.commit();
   }
+
+  static Future<void> settleUpBilateral({
+    required String groupId,
+    required String targetId,
+    required double amount,
+    required String friendName,
+    required List<String> groupMemberIds,
+  }) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) throw Exception('Not logged in');
+
+    final db = FirebaseFirestore.instance;
+    final batch = db.batch();
+    final now = DateTime.now();
+
+    // The current user is paying the target
+    final fromId = currentUser.uid;
+    final toId = targetId;
+
+    // Write settlement document for current user
+    final mySettlementRef = db
+        .collection('users')
+        .doc(fromId)
+        .collection('settlements')
+        .doc();
+
+    batch.set(mySettlementRef, {
+      'fromId': fromId,
+      'toId': toId,
+      'amount': amount,
+      'method': 'Settle Up',
+      'groupId': groupId,
+      'createdAt': now,
+    });
+
+    // Write settlement document for target user
+    final targetSettlementRef = db
+        .collection('users')
+        .doc(toId)
+        .collection('settlements')
+        .doc(mySettlementRef.id);
+
+    batch.set(targetSettlementRef, {
+      'fromId': fromId,
+      'toId': toId,
+      'amount': amount,
+      'method': 'Settle Up',
+      'groupId': groupId,
+      'createdAt': now,
+    });
+
+    // Log to group activity feed
+    final activityRef = db
+        .collection('groups')
+        .doc(groupId)
+        .collection('activities')
+        .doc();
+
+    batch.set(activityRef, {
+      'type': 'settlement',
+      'description': 'Settled \$${amount.toStringAsFixed(2)} with $friendName',
+      'amount': amount,
+      'groupId': groupId,
+      'creatorId': fromId,
+      'relatedId': mySettlementRef.id,
+      'involvedUsers': groupMemberIds,
+      'createdAt': now,
+    });
+
+    await batch.commit();
+  }
 }
 

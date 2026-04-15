@@ -297,6 +297,7 @@ class Activity {
   final String? groupId;
   final String? creatorId;
   final String? relatedId;
+  final List<String> involvedUsers;
   final DateTime createdAt;
 
   const Activity({
@@ -307,6 +308,7 @@ class Activity {
     this.groupId,
     this.creatorId,
     this.relatedId,
+    this.involvedUsers = const [],
     required this.createdAt,
   });
 
@@ -323,6 +325,7 @@ class Activity {
       groupId: d['groupId'],
       creatorId: d['creatorId'],
       relatedId: d['relatedId'],
+      involvedUsers: List<String>.from(d['involvedUsers'] ?? []),
       createdAt: (d['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -334,6 +337,7 @@ class Activity {
         'groupId': groupId,
         'creatorId': creatorId,
         'relatedId': relatedId,
+        'involvedUsers': involvedUsers,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 }

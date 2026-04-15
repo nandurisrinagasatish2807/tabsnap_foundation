@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
@@ -298,7 +299,10 @@ class _FriendTile extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               GestureDetector(
-                                onTap: () => SocialService.acceptFriendRequest(friend.id),
+                                onTap: () async {
+                                  HapticFeedback.mediumImpact();
+                                  await SocialService.acceptFriendRequest(friend.id);
+                                },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
@@ -400,7 +404,7 @@ class _EmptyFriendsState extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onAddFriend,
               icon: const Icon(Icons.person_add_outlined, size: 18),
-              label: const Text('Add a friend'),
+              label: const Text('Add your first friend'),
             ),
           ],
         ),

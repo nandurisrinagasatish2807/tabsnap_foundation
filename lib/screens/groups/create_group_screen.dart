@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../services/group_service.dart';
@@ -54,6 +55,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         emoji: _selectedEmoji,
         memberIds: memberIds,
       );
+      
+      HapticFeedback.mediumImpact();
       
       if (!mounted) return;
       

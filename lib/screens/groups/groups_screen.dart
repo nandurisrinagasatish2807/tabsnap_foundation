@@ -231,13 +231,19 @@ class _GroupTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      isZero ? 'Settled' : '\$${balance.abs().toStringAsFixed(2)}',
+                      isZero 
+                        ? 'Settled' 
+                        : isPositive 
+                            ? 'You are owed \$${balance.abs().toStringAsFixed(2)}' 
+                            : 'You owe \$${balance.abs().toStringAsFixed(2)}',
                       style: AppTextStyles.titleSmall.copyWith(
-                        color: isZero ? AppColors.textHint : isPositive ? AppColors.success : AppColors.danger,
+                        color: isZero 
+                          ? AppColors.textHint 
+                          : isPositive 
+                              ? const Color(0xFF00C853) // Emerald
+                              : const Color(0xFFFF5252), // Coral
                       ),
                     ),
-                    if (!isZero)
-                      Text(isPositive ? 'you are owed' : 'you owe', style: AppTextStyles.bodySmall),
                   ],
                 ),
                 const SizedBox(width: 4),

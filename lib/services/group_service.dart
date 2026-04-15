@@ -33,6 +33,23 @@ class GroupService {
       });
     }
 
+    // 3. Log group creation activity
+    final activityRef = db
+        .collection('groups')
+        .doc(groupRef.id)
+        .collection('activities')
+        .doc();
+
+    batch.set(activityRef, {
+      'type': 'groupCreated',
+      'description': 'Group "$name" was created',
+      'groupId': groupRef.id,
+      'creatorId': memberIds.first,
+      'relatedId': groupRef.id,
+      'involvedUsers': memberIds,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
     await batch.commit();
     return groupRef.id;
   }

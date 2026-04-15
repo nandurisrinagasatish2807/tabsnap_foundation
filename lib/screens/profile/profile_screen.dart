@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/constants.dart';
 import '../../router/app_router.dart';
 
@@ -125,6 +126,16 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.help_outline,
                 label: 'Help & Support',
                 onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.bug_report_outlined,
+                label: 'Report a Bug',
+                onTap: () async {
+                  final uri = Uri.parse('mailto:support@tabsnap.app');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
               ),
 
               const SizedBox(height: 24),

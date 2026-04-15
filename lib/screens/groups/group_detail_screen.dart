@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
+import '../../services/social_service.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -259,6 +261,99 @@ class _GroupDetailScreenState
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _showSettleUpSheet() {
+    final netBalances = _netBalances ?? {};
+    final peopleIOwe = netBalances.entries.where((e) => e.value < 0).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Settle Up', style: AppTextStyles.titleLarge),
+            const SizedBox(height: 8),
+            Text('Select a balance to mark as paid', style: AppTextStyles.bodyMedium),
+            const SizedBox(height: 16),
+            if (peopleIOwe.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'You are all settled up!',
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.success),
+                  ),
+                ),
+              )
+            else
+              ...peopleIOwe.map((entry) {
+                final friendId = entry.key;
+                final amount = entry.value.abs();
+                final name = _nameFor(friendId);
+                final colorIdx = _colorFor(friendId);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      _MiniAvatar(name: name, colorIdx: colorIdx),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: AppTextStyles.titleSmall),
+                            Text('You owe \$${amount.toStringAsFixed(2)}',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger)),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          HapticFeedback.mediumImpact();
+                          Navigator.pop(context); // Close sheet
+                          try {
+                            await SocialService.settleUpBilateral(
+                              groupId: _group.id,
+                              targetId: friendId,
+                              amount: amount,
+                              friendName: name,
+                              groupMemberIds: _group.memberIds,
+                            );
+                            _loadEverything(); // Refresh screen
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to settle up: \$e')),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          minimumSize: const Size(0, 36),
+                        ),
+                        child: const Text('Mark as Paid'),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
     );
   }
 
@@ -485,28 +580,7 @@ class _GroupDetailScreenState
                       children: [
                         _ActionChip(
                           label: 'Settle up',
-                          onTap: () {
-                            // settle with first person
-                            if (netBalances
-                                .isNotEmpty) {
-                              final first = netBalances
-                                  .entries.first;
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.settleUp,
-                                arguments: {
-                                  'groupId': _group.id,
-                                  'targetFriendId':
-                                      first.key,
-                                  'friendName':
-                                      _nameFor(
-                                          first.key),
-                                  'amount':
-                                      first.value,
-                                },
-                              );
-                            }
-                          },
+                          onTap: _showSettleUpSheet,
                           isPrimary: true,
                         ),
                         const SizedBox(width: 8),
@@ -592,29 +666,38 @@ class _AddMemberSheetState
     super.dispose();
   }
 
-  Future<void> _addMember(
-      String friendId, String friendName) async {
-    // Add to group's memberIds
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.currentUserId)
-        .collection('groups')
-        .doc(widget.groupId)
-        .update({
+  Future<void> _addMember(String friendId, String friendName) async {
+    final db = FirebaseFirestore.instance;
+    final batch = db.batch();
+
+    batch.update(db.collection('groups').doc(widget.groupId), {
       'memberIds': FieldValue.arrayUnion([friendId]),
     });
+
+    batch.set(db.collection('users').doc(friendId).collection('groups').doc(widget.groupId), {
+      'joinedAt': FieldValue.serverTimestamp(),
+    });
+
+    batch.set(db.collection('groups').doc(widget.groupId).collection('activities').doc(), {
+      'type': 'friendAdded',
+      'description': '$friendName joined the group',
+      'groupId': widget.groupId,
+      'creatorId': widget.currentUserId,
+      'relatedId': friendId,
+      'involvedUsers': [...widget.existingMemberIds, friendId],
+      'createdAt': DateTime.now(),
+    });
+
+    await batch.commit();
     widget.onMemberAdded();
   }
 
   Future<void> _addTempMember(String name) async {
     if (name.trim().isEmpty) return;
+    final db = FirebaseFirestore.instance;
 
     // Create as friend first
-    final friendsRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.currentUserId)
-        .collection('friends');
-
+    final friendsRef = db.collection('users').doc(widget.currentUserId).collection('friends');
     final count = (await friendsRef.get()).docs.length;
     final doc = await friendsRef.add({
       'name': name.trim(),
@@ -622,15 +705,23 @@ class _AddMemberSheetState
       'isTemporary': true,
     });
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.currentUserId)
-        .collection('groups')
-        .doc(widget.groupId)
-        .update({
+    final batch = db.batch();
+
+    batch.update(db.collection('groups').doc(widget.groupId), {
       'memberIds': FieldValue.arrayUnion([doc.id]),
     });
 
+    batch.set(db.collection('groups').doc(widget.groupId).collection('activities').doc(), {
+      'type': 'friendAdded',
+      'description': '${name.trim()} was added to the group',
+      'groupId': widget.groupId,
+      'creatorId': widget.currentUserId,
+      'relatedId': doc.id,
+      'involvedUsers': [...widget.existingMemberIds, doc.id],
+      'createdAt': DateTime.now(),
+    });
+
+    await batch.commit();
     widget.onMemberAdded();
     _nameController.clear();
   }
