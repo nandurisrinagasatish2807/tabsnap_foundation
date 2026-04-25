@@ -27,7 +27,7 @@ class UserModel {
       email: d['email'] ?? '',
       handle: d['handle'] ?? '',
       qrValue: d['qrValue'],
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] is Timestamp ? d['createdAt'] as Timestamp : Timestamp.now()).toDate(),
     );
   }
 
@@ -135,7 +135,7 @@ class Group {
       name: d['name'] ?? '',
       emoji: d['emoji'] ?? '👥',
       memberIds: List<String>.from(d['memberIds'] ?? []),
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] is Timestamp ? d['createdAt'] as Timestamp : Timestamp.now()).toDate(),
     );
   }
 
@@ -225,7 +225,7 @@ class Expense {
       ),
       groupId: d['groupId'],
       category: d['category'],
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] is Timestamp ? d['createdAt'] as Timestamp : Timestamp.now()).toDate(),
     );
   }
 
@@ -271,7 +271,7 @@ class Settlement {
       amount: (d['amount'] as num).toDouble(),
       method: d['method'] ?? 'Cash',
       note: d['note'],
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] is Timestamp ? d['createdAt'] as Timestamp : Timestamp.now()).toDate(),
     );
   }
 
@@ -326,7 +326,7 @@ class Activity {
       creatorId: d['creatorId'],
       relatedId: d['relatedId'],
       involvedUsers: List<String>.from(d['involvedUsers'] ?? []),
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] is Timestamp ? d['createdAt'] as Timestamp : Timestamp.now()).toDate(),
     );
   }
 
