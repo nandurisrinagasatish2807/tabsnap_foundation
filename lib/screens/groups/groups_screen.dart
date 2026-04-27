@@ -185,7 +185,7 @@ class _GroupTile extends StatelessWidget {
         final isZero = balance.abs() < 0.01;
 
         return GestureDetector(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.groupDetail, arguments: group),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.groupDetail, arguments: group.id),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

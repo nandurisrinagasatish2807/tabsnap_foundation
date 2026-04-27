@@ -45,7 +45,7 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
       _friendsWithMe = [
         Friend(
           id: currentUid,
-          name: 'Me',
+          fullName: 'Me',
           colorIndex: 0,
         ),
         ...widget.friends,
@@ -313,7 +313,7 @@ class _ItemAssignCard extends StatelessWidget {
               ...friends.map((friend) {
                 final isSelected = item.assignedTo.contains(friend.id);
                 return _SmartBubble(
-                  label: friend.name.split(' ').first,
+                  label: friend.fullName.split(' ').first,
                   isSelected: isSelected,
                   color: AvatarColors.get(friend.colorIndex),
                   onTap: () => onTogglePerson(friend.id),
@@ -450,7 +450,7 @@ class _SplitPreview extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      friend.name.split(' ').first,
+                      friend.fullName.split(' ').first,
                       style: AppTextStyles.bodyMedium,
                     ),
                   ),

@@ -210,7 +210,14 @@ class ProfileScreen extends StatelessWidget {
                   data: 'tabsnap://user/$uid',
                   version: QrVersions.auto,
                   size: 200.0,
-                  foregroundColor: AppColors.primary, // Navy
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: AppColors.primary,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: 32),

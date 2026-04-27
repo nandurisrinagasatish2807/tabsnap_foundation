@@ -73,7 +73,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Set up your identity',
                   style: AppTextStyles.displayMedium,
                 ),
@@ -83,7 +83,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 40),
-                Text('Full Name', style: AppTextStyles.titleSmall),
+                const Text('Full Name', style: AppTextStyles.titleSmall),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
@@ -95,7 +95,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   validator: (v) => (v == null || v.trim().length < 2) ? 'Please enter your full name' : null,
                 ),
                 const SizedBox(height: 24),
-                Text('Username Handle', style: AppTextStyles.titleSmall),
+                const Text('Username Handle', style: AppTextStyles.titleSmall),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _handleController,

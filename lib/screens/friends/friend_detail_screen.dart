@@ -42,7 +42,7 @@ class FriendDetailScreen extends StatelessWidget {
               size: 18, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(friend.name, style: AppTextStyles.titleMedium),
+        title: Text(friend.fullName, style: AppTextStyles.titleMedium),
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
@@ -80,7 +80,7 @@ class FriendDetailScreen extends StatelessWidget {
 
                 if (friendExpenses.isEmpty) {
                   return _EmptyExpensesState(
-                    friendName: friend.name,
+                    friendName: friend.fullName,
                     onAddExpense: () => Navigator.pushNamed(
                       context,
                       AppRoutes.choosePeople,
@@ -106,7 +106,7 @@ class FriendDetailScreen extends StatelessWidget {
                       expense: expense,
                       paidByMe: paidByMe,
                       amount: amount,
-                      friendName: friend.name,
+                      friendName: friend.fullName,
                     );
                   },
                 );
@@ -219,7 +219,7 @@ class _FriendHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(friend.name, style: AppTextStyles.titleLarge),
+              Text(friend.fullName, style: AppTextStyles.titleLarge),
               const SizedBox(height: 4),
               if (isZero)
                 Text(
@@ -240,8 +240,8 @@ class _FriendHeader extends StatelessWidget {
                     ),
                     Text(
                       isPositive
-                          ? '${friend.name} owes you'
-                          : 'You owe ${friend.name}',
+                          ? '${friend.fullName} owes you'
+                          : 'You owe ${friend.fullName}',
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -409,14 +409,14 @@ class _SettleUpBar extends StatelessWidget {
                 arguments: {
                   'groupId': '', // Friend-to-friend payments don't need a group, but signature requires String
                   'targetFriendId': friend.id,
-                  'friendName': friend.name,
+                  'friendName': friend.fullName,
                   'amount': balance,
                 },
               ),
               child: Text(
                 balance > 0
-                    ? 'Record payment from ${friend.name}'
-                    : 'Record payment to ${friend.name}',
+                    ? 'Record payment from ${friend.fullName}'
+                    : 'Record payment to ${friend.fullName}',
               ),
             ),
           ),

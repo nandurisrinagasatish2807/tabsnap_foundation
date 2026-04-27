@@ -1,7 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/models.dart';
 
 class GroupService {
   GroupService._();
+
+  static Future<Group?> getGroupById(String groupId) async {
+    final doc = await FirebaseFirestore.instance.collection('groups').doc(groupId).get();
+    if (!doc.exists) return null;
+    return Group.fromFirestore(doc);
+  }
 
   static Future<String> createGroup({
     required String name,

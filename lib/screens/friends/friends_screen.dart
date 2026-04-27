@@ -177,7 +177,6 @@ class FriendsScreen extends StatelessWidget {
   }
 }
 
-
 class _FriendTile extends StatelessWidget {
   final Friend friend;
   final String currentUserId;
@@ -187,65 +186,19 @@ class _FriendTile extends StatelessWidget {
     required this.currentUserId,
   });
 
-  Future<double> _calculateBalance() async {
-    double balance = 0;
-
-    final expenses = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserId)
-        .collection('expenses')
-        .get();
-
-    for (final doc in expenses.docs) {
-      final data = doc.data();
-      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
-      final paidBy = data['paidById'] as String? ?? '';
-      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? currentUserId);
-      
-      final splits = <String, dynamic>{};
-      rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
-
-      if (paidBy == currentUserId) {
-        if (splits.containsKey(friend.id)) {
-          final amt = double.parse(((splits[friend.id] as num).toDouble()).toStringAsFixed(2));
-          balance = double.parse((balance + amt).toStringAsFixed(2));
-        }
-      } else if (paidBy == friend.id) {
-        if (splits.containsKey(currentUserId)) {
-          final amt = double.parse(((splits[currentUserId] as num).toDouble()).toStringAsFixed(2));
-          balance = double.parse((balance - amt).toStringAsFixed(2));
-        }
-      }
-    }
-
-    final settlements = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserId)
-        .collection('settlements')
-        .get();
-
-    for (final doc in settlements.docs) {
-      final data = doc.data();
-      final fromId = data['fromId'] as String? ?? '';
-      final toId = data['toId'] as String? ?? '';
-      final amt = (data['amount'] as num).toDouble();
-
-      if (fromId == currentUserId && toId == friend.id) {
-        balance += amt;
-      } else if (fromId == friend.id && toId == currentUserId) {
-        balance -= amt;
-      }
-    }
-
-    return balance;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<double>(
-      future: _calculateBalance(),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('balances')
+          .doc(friend.id)
+          .snapshots(),
       builder: (context, snapshot) {
-        final balance = snapshot.data ?? 0.0;
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        final balance = (data?['netBalance'] as num?)?.toDouble() ?? 0.0;
+        
         final isPositive = balance > 0;
         final isZero = balance.abs() < 0.01;
 
@@ -285,7 +238,7 @@ class _FriendTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(friend.name, style: AppTextStyles.titleSmall),
+                      Text(friend.fullName, style: AppTextStyles.titleSmall),
                       if (friend.isTemporary)
                         Text('Contact only', style: AppTextStyles.bodySmall),
                     ],

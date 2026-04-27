@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
+import '../../services/balance_service.dart';
 
 class SplitSummaryScreen extends StatefulWidget {
   final List<ReceiptItem> items;
@@ -166,6 +167,13 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
         'createdAt': DateTime.now(),
       });
 
+      // ── Synchronously Update O(1) Balances ────────────
+      await BalanceService.updateBalancesForExpense(
+        currentUser.uid,
+        paidById,
+        normalizedSplits,
+      );
+
       if (mounted) _showSuccessSheet();
     } catch (e) {
       setState(() => _isSaving = false);
@@ -232,7 +240,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                 (f) => f.id == entry.key,
                 orElse: () => Friend(
                   id: entry.key,
-                  name: isMe ? 'Me' : 'Someone',
+                  fullName: isMe ? 'Me' : 'Someone',
                   colorIndex: 0,
                 ),
               );
@@ -251,7 +259,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                   statusText = 'their share \$${entry.value.toStringAsFixed(2)}';
                   statusColor = AppColors.textSecondary;
                 } else {
-                  final payerName = _paidBy.name.split(' ').first;
+                  final payerName = _paidBy.fullName.split(' ').first;
                   statusText = 'owes $payerName \$${entry.value.toStringAsFixed(2)}';
                   statusColor = AppColors.textSecondary;
                 }
@@ -282,7 +290,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        friend.name,
+                        friend.fullName,
                         style: AppTextStyles.bodyMedium,
                       ),
                     ),
@@ -324,7 +332,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
     // Search friends list passed from assign screen
     try {
       final friend = widget.friends.firstWhere((f) => f.id == memberId);
-      return friend.name;
+      return friend.fullName;
     } catch (_) {
       // Not in friends list — use short ID
       return memberId.length > 8 ? memberId.substring(0, 8) : memberId;
@@ -425,7 +433,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                           onTap: () => setState(() {
                             _paidBy = Friend(
                               id: 'me',
-                              name: 'Me',
+                              fullName: 'Me',
                               colorIndex: 0,
                             );
                           }),
@@ -435,7 +443,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                         ...widget.friends.map((friend) => Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: _PaidByChip(
-                                label: friend.name.split(' ').first,
+                                label: friend.fullName.split(' ').first,
                                 colorIndex: friend.colorIndex,
                                 isSelected: _paidBy.id == friend.id,
                                 onTap: () => setState(() => _paidBy = friend),
@@ -538,7 +546,7 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                           try {
                             return widget.friends
                                 .firstWhere((f) => f.id == id)
-                                .name
+                                .fullName
                                 .split(' ')
                                 .first;
                           } catch (_) {

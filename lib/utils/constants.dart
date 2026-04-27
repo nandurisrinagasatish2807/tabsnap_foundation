@@ -11,7 +11,7 @@ class AppColors {
   static const accentAlt = Color(0xFFFF8C5A);
 
   // Semantic
-  static const success = Color(0xFF2ECC8F);
+  static const success = Color(0xFF00C853); // Emerald
   static const danger = Color(0xFFE24B4A);
   static const warning = Color(0xFFEF9F27);
 

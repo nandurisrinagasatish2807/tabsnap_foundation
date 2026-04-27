@@ -176,15 +176,14 @@ class _ScannerOverlayShape extends ShapeBorder {
 
     final double cx = rect.size.width / 2;
     final double cy = rect.size.height / 2;
-    final double half = cutOutSize / 2;
-    final double brr = 16.0; // border radius
+    const double brr = 16.0; // border radius
     
     final r = Rect.fromCenter(
       center: Offset(cx, cy),
       width: cutOutSize,
       height: cutOutSize,
     );
-    canvas.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(brr)), borderPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(brr)), borderPaint);
   }
 
   @override

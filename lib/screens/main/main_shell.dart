@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
-import '../../models/models.dart';
 import '../../router/app_router.dart';
 import '../friends/friends_screen.dart';
 import '../groups/groups_screen.dart';
@@ -10,14 +8,25 @@ import '../activity/activity_screen.dart';
 import '../profile/profile_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final int initialIndex;
+  
+  const MainShell({
+    super.key,
+    this.initialIndex = 0,
+  });
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _screens = const [
     FriendsScreen(),

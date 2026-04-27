@@ -99,7 +99,7 @@ class _ChoosePeopleScreenState extends State<ChoosePeopleScreen> {
 
                   final newFriend = Friend(
                     id: doc.id,
-                    name: name,
+                    fullName: name,
                     colorIndex: count % 8,
                     isTemporary: true,
                   );
@@ -193,7 +193,7 @@ class _ChoosePeopleScreenState extends State<ChoosePeopleScreen> {
                             ),
                           ),
                         ),
-                        label: Text(f.name,
+                        label: Text(f.fullName,
                             style: AppTextStyles.bodySmall
                                 .copyWith(color: AppColors.textPrimary)),
                         deleteIcon: const Icon(Icons.close, size: 14),
@@ -344,7 +344,7 @@ class _FriendSelectTile extends StatelessWidget {
             ),
         ],
       ),
-      title: Text(friend.name, style: AppTextStyles.titleSmall),
+      title: Text(friend.fullName, style: AppTextStyles.titleSmall),
       subtitle: friend.isTemporary
           ? Text('Contact only', style: AppTextStyles.bodySmall)
           : null,

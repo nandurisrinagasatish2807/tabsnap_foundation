@@ -7,12 +7,13 @@ import '../../utils/constants.dart';
 import '../../models/models.dart';
 import '../../router/app_router.dart';
 import '../../services/social_service.dart';
+import '../../services/group_service.dart';
 
 class GroupDetailScreen extends StatefulWidget {
-  final Group group;
+  final String groupId;
   const GroupDetailScreen({
     super.key,
-    required this.group,
+    required this.groupId,
   });
 
   @override
@@ -27,12 +28,11 @@ class _GroupDetailScreenState
   Map<String, double>? _netBalances;
   bool _balancesLoading = true;
   String _groupNotes = '';
-  late Group _group;
+  Group? _group;
 
   @override
   void initState() {
     super.initState();
-    _group = widget.group;
     _loadEverything();
   }
 
@@ -66,18 +66,34 @@ class _GroupDetailScreenState
       colorIdx++;
     }
 
-    // Reload group from Firestore to get latest data
+    // Reload group from root Firestore 'groups' collection to get latest data
+    final group = await GroupService.getGroupById(widget.groupId);
+    
+    if (group == null) {
+      if (mounted) {
+        setState(() {
+          _balancesLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Group not found')),
+        );
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    _group = group;
+
     final groupDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .collection('groups')
-        .doc(_group.id)
+        .doc(widget.groupId)
         .get();
 
     if (groupDoc.exists) {
       final data = groupDoc.data()!;
       _groupNotes = data['notes'] as String? ?? '';
-      _group = Group.fromFirestore(groupDoc);
     }
 
     final balances =
@@ -99,7 +115,7 @@ class _GroupDetailScreenState
         .collection('users')
         .doc(uid)
         .collection('expenses')
-        .where('groupId', isEqualTo: _group.id)
+        .where('groupId', isEqualTo: widget.groupId)
         .get();
 
     for (final doc in expenses.docs) {
@@ -130,7 +146,7 @@ class _GroupDetailScreenState
         .collection('users')
         .doc(uid)
         .collection('settlements')
-        .where('groupId', isEqualTo: _group.id)
+        .where('groupId', isEqualTo: widget.groupId)
         .get();
 
     for (final doc in settlements.docs) {
@@ -159,11 +175,11 @@ class _GroupDetailScreenState
     final currentUid =
         FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    final friends = _group.memberIds
+    final friends = (_group?.memberIds ?? [])
         .where((id) => id != currentUid)
         .map((id) => Friend(
               id: id,
-              name: _nameFor(id),
+              fullName: _nameFor(id),
               colorIndex: _colorFor(id),
               isTemporary: false,
             ))
@@ -174,7 +190,7 @@ class _GroupDetailScreenState
       AppRoutes.camera,
       arguments: {
         'friends': friends,
-        'groupId': _group.id,
+        'groupId': _group?.id,
       },
     );
   }
@@ -192,9 +208,9 @@ class _GroupDetailScreenState
       ),
       builder: (context) =>
           _AddMemberSheet(
-        groupId: _group.id,
+        groupId: _group?.id ?? '',
         currentUserId: uid,
-        existingMemberIds: _group.memberIds,
+        existingMemberIds: _group?.memberIds ?? [],
         onMemberAdded: () {
           _loadEverything();
         },
@@ -245,7 +261,7 @@ class _GroupDetailScreenState
                       .collection('users')
                       .doc(uid)
                       .collection('groups')
-                      .doc(_group.id)
+                      .doc(_group?.id ?? '')
                       .update({
                     'notes': controller.text.trim()
                   });
@@ -325,11 +341,11 @@ class _GroupDetailScreenState
                           Navigator.pop(context); // Close sheet
                           try {
                             await SocialService.settleUpBilateral(
-                              groupId: _group.id,
+                              groupId: _group!.id,
                               targetId: friendId,
                               amount: amount,
                               friendName: name,
-                              groupMemberIds: _group.memberIds,
+                              groupMemberIds: _group!.memberIds,
                             );
                             _loadEverything(); // Refresh screen
                           } catch (e) {
@@ -359,12 +375,18 @@ class _GroupDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final uid =
-        FirebaseAuth.instance.currentUser?.uid ?? '';
-    final memberCount = _group.memberIds.length;
+    if (_group == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(backgroundColor: AppColors.primary),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final memberCount = _group!.memberIds.length;
     final netBalances = _netBalances ?? {};
-    final netTotal = netBalances.values
-        .fold(0.0, (acc, v) => acc + v);
+    final netTotal = netBalances.values.fold(0.0, (acc, v) => acc + v);
     final isSettled = netTotal.abs() < 0.01;
     final iOweOverall = netTotal < 0;
 
@@ -418,14 +440,14 @@ class _GroupDetailScreenState
                         Row(
                           children: [
                             Text(
-                              _group.emoji,
+                              _group!.emoji,
                               style: const TextStyle(
                                   fontSize: 28),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                _group.name,
+                                _group!.name,
                                 style: AppTextStyles
                                     .displayMedium
                                     .copyWith(
@@ -485,11 +507,25 @@ class _GroupDetailScreenState
                     CrossAxisAlignment.start,
                 children: [
                   if (_balancesLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                          vertical: 8),
-                      child: CircularProgressIndicator(
-                          color: AppColors.accent),
+                    const Row(
+                      children: [
+                        Text(
+                          '\$0.00',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent, strokeWidth: 2),
+                        ),
+                      ],
                     )
                   else if (isSettled)
                     Row(
@@ -614,7 +650,7 @@ class _GroupDetailScreenState
             // ── Activity feed ────────────────────────
             Expanded(
               child: _SectionedFeed(
-                group: _group,
+                group: _group!,
                 currentUid: uid,
                 nameFor: _nameFor,
                 colorFor: _colorFor,

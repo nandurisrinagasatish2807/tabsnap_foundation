@@ -175,13 +175,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   final f = friends[i];
                   final isSelected = _selectedFriendIds.contains(f.id);
                   return CheckboxListTile(
-                    title: Text(f.name, style: AppTextStyles.titleSmall),
+                    title: Text(f.fullName, style: AppTextStyles.titleSmall),
                     value: isSelected,
                     activeColor: AppColors.primary,
                     onChanged: (val) {
                       setState(() {
-                        if (val == true) _selectedFriendIds.add(f.id);
-                        else _selectedFriendIds.remove(f.id);
+                        if (val == true) {
+                          _selectedFriendIds.add(f.id);
+                        } else {
+                          _selectedFriendIds.remove(f.id);
+                        }
                       });
                     },
                   );
@@ -219,7 +222,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             onPressed: _isSaving ? null : _nextStep,
             child: _isSaving 
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text(_currentStep == 0 ? 'Next' : 'Create Group', style: TextStyle(color: Colors.white)),
+              : Text(_currentStep == 0 ? 'Next' : 'Create Group', style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

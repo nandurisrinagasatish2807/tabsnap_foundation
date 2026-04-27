@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
@@ -53,6 +52,9 @@ class AppRouter {
       case AppRoutes.main:
         return _fade(const MainShell());
 
+      case AppRoutes.friends:
+        return _fade(const MainShell(initialIndex: 0));
+
       case AppRoutes.qrScanner: // Added
         return _slide(const QRScannerScreen());
 
@@ -64,8 +66,8 @@ class AppRouter {
         return _slide(FriendDetailScreen(friend: friend));
 
       case AppRoutes.groupDetail: // Added
-        final group = settings.arguments as Group;
-        return _slide(GroupDetailScreen(group: group));
+        final groupId = settings.arguments as String;
+        return _slide(GroupDetailScreen(groupId: groupId));
 
       case AppRoutes.choosePeople:
         // Accept optional groupId and isManual from arguments

@@ -59,7 +59,7 @@ class UserModel {
 
 class Friend {
   final String id;
-  final String name;
+  final String fullName;
   final String? email;
   final int colorIndex;
   final bool isTemporary; // No app account needed
@@ -69,7 +69,7 @@ class Friend {
 
   const Friend({
     required this.id,
-    required this.name,
+    required this.fullName,
     this.email,
     required this.colorIndex,
     this.isTemporary = false,
@@ -82,7 +82,7 @@ class Friend {
     final d = doc.data() as Map<String, dynamic>;
     return Friend(
       id: doc.id,
-      name: d['name'] ?? '',
+      fullName: d['fullName'] ?? '',
       email: d['email'],
       colorIndex: d['colorIndex'] ?? 0,
       isTemporary: d['isTemporary'] ?? false,
@@ -93,7 +93,7 @@ class Friend {
   }
 
   Map<String, dynamic> toFirestore() => {
-        'name': name,
+        'fullName': fullName,
         'email': email,
         'colorIndex': colorIndex,
         'isTemporary': isTemporary,
@@ -103,11 +103,11 @@ class Friend {
       };
 
   String get initials {
-    final parts = name.trim().split(' ');
+    final parts = fullName.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
   }
 }
 

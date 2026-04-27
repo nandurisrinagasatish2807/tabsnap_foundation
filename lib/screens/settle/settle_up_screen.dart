@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/constants.dart';
 import '../../router/app_router.dart';
+import '../../services/balance_service.dart';
 
 class SettleUpScreen extends StatefulWidget {
   final String groupId;
@@ -114,6 +115,14 @@ class _SettleUpScreenState
         'relatedId': settlementRef.id,   // link to doc
         'createdAt': now,
       });
+
+      // ── 3. Synchronously Update O(1) Balances ───────
+      await BalanceService.updateBalancesForSettlement(
+        uid,
+        fromId,
+        toId,
+        _parsedAmount,
+      );
 
       if (mounted) _showSuccessSheet();
     } catch (e) {

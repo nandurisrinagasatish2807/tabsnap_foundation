@@ -64,8 +64,11 @@ class OverallBalanceCard extends StatelessWidget {
     double totalOwe = 0;
 
     netBalances.forEach((_, balance) {
-      if (balance > 0.01) totalOwed += balance;
-      else if (balance < -0.01) totalOwe += balance.abs();
+      if (balance > 0.01) {
+        totalOwed += balance;
+      } else if (balance < -0.01) {
+        totalOwe += balance.abs();
+      }
     });
 
     return {'totalOwed': totalOwed, 'totalOwe': totalOwe};
