@@ -5,6 +5,17 @@
 .pub/
 build/
 
+# --- TabSnap Project Cleanup ---
+# Local tooling & Metadata
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Local analysis / debug output
+analyze.json
+analyze_output.txt
+out.txt
+
 # Android
 .gradle/
 local.properties
@@ -13,6 +24,7 @@ local.properties
 *.properties
 !gradle.properties
 flutter_export_environment.sh
+android/.kotlin/
 
 # iOS
 .generated/
@@ -22,15 +34,16 @@ Flutter/flutter_export_environment.sh
 ServiceDefinitions.json
 Pods/
 
-# Secrets
+# Secrets & Config
 .env
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
 
 # IDEs
 .idea/
 .vscode/
 *.iml
-# Personal/Auto-generated logs
+
+# Logs
 *.log
-android/.kotlin/
-# Sensitive Firebase config
-lib/firebase_options.dart

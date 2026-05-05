@@ -1,4 +1,0 @@
-Analyzing tabsnap...                                            
-
-   info - The parameter name 'sum' matches a visible type name - lib\screens\groups\group_detail_screen.dart:245:49 - avoid_types_as_parameter_names
-
