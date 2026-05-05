@@ -9,11 +9,7 @@ import '../profile/profile_screen.dart';
 
 class MainShell extends StatefulWidget {
   final int initialIndex;
-  
-  const MainShell({
-    super.key,
-    this.initialIndex = 0,
-  });
+  const MainShell({super.key, this.initialIndex = 0});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -115,7 +111,8 @@ class _MainShellState extends State<MainShell> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('What do you want to do?', style: AppTextStyles.titleMedium),
+              const Text('What do you want to do?',
+                  style: AppTextStyles.titleMedium),
               const SizedBox(height: 16),
               ListTile(
                 leading: Container(
@@ -124,13 +121,17 @@ class _MainShellState extends State<MainShell> {
                     color: AppColors.accent.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.document_scanner_outlined, color: AppColors.accent),
+                  child: const Icon(Icons.document_scanner_outlined,
+                      color: AppColors.accent),
                 ),
-                title: const Text('Scan Receipt', style: AppTextStyles.titleSmall),
-                subtitle: const Text('Auto-extract items and prices', style: AppTextStyles.bodySmall),
+                title:
+                    const Text('Scan Receipt', style: AppTextStyles.titleSmall),
+                subtitle: const Text('Auto-extract items and prices',
+                    style: AppTextStyles.bodySmall),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, AppRoutes.choosePeople, arguments: {'isManual': false});
+                  Navigator.pushNamed(context, AppRoutes.choosePeople,
+                      arguments: {'isManual': false});
                 },
               ),
               ListTile(
@@ -142,11 +143,14 @@ class _MainShellState extends State<MainShell> {
                   ),
                   child: const Icon(Icons.edit_note, color: AppColors.success),
                 ),
-                title: const Text('Manual Expense', style: AppTextStyles.titleSmall),
-                subtitle: const Text('Enter items yourself', style: AppTextStyles.bodySmall),
+                title: const Text('Manual Expense',
+                    style: AppTextStyles.titleSmall),
+                subtitle: const Text('Enter items yourself',
+                    style: AppTextStyles.bodySmall),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, AppRoutes.choosePeople, arguments: {'isManual': true});
+                  Navigator.pushNamed(context, AppRoutes.choosePeople,
+                      arguments: {'isManual': true});
                 },
               ),
               const Divider(height: 16, indent: 24, endIndent: 24),
@@ -157,10 +161,13 @@ class _MainShellState extends State<MainShell> {
                     color: AppColors.textPrimary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.group_add_outlined, color: AppColors.textPrimary),
+                  child: const Icon(Icons.group_add_outlined,
+                      color: AppColors.textPrimary),
                 ),
                 title: const Text('New Group', style: AppTextStyles.titleSmall),
-                subtitle: const Text('Create a shared tab for trips or roommates', style: AppTextStyles.bodySmall),
+                subtitle: const Text(
+                    'Create a shared tab for trips or roommates',
+                    style: AppTextStyles.bodySmall),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AppRoutes.createGroup);

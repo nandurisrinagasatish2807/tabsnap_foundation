@@ -22,7 +22,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
-    
+
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -90,7 +90,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             controller: _controller,
             onDetect: _onDetect,
           ),
-          
+
           // Scanner Overlay
           Container(
             decoration: ShapeDecoration(
@@ -101,7 +101,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               ),
             ),
           ),
-          
+
           const Positioned(
             bottom: 60,
             child: Text(
@@ -163,10 +163,10 @@ class _ScannerOverlayShape extends ShapeBorder {
     final paint = Paint()
       ..color = Colors.black54
       ..style = PaintingStyle.fill;
-    
+
     // Fill the mask
     canvas.drawPath(getOuterPath(rect), paint);
-    
+
     // Draw the border
     final borderPaint = Paint()
       ..color = borderColor
@@ -176,14 +176,16 @@ class _ScannerOverlayShape extends ShapeBorder {
 
     final double cx = rect.size.width / 2;
     final double cy = rect.size.height / 2;
+
     const double brr = 16.0; // border radius
-    
+
     final r = Rect.fromCenter(
       center: Offset(cx, cy),
       width: cutOutSize,
       height: cutOutSize,
     );
-    canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(brr)), borderPaint);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(brr)), borderPaint);
   }
 
   @override

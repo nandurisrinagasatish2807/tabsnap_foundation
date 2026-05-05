@@ -21,12 +21,29 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final Set<String> _selectedFriendIds = {};
   bool _isSaving = false;
 
-  final emojis = ['🏠', '✈️', '🍕', '🎉', '💼', '🎮', '🏋️', '🛒', '🎓', '❤️', '🌴', '🎵', '🏖️', '🍻', '🏡'];
+  final emojis = [
+    '🏠',
+    '✈️',
+    '🍕',
+    '🎉',
+    '💼',
+    '🎮',
+    '🏋️',
+    '🛒',
+    '🎓',
+    '❤️',
+    '🌴',
+    '🎵',
+    '🏖️',
+    '🍻',
+    '🏡'
+  ];
 
   void _nextStep() {
     if (_currentStep == 0) {
       if (_nameController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a group name')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter a group name')));
         return;
       }
       setState(() => _currentStep = 1);
@@ -42,24 +59,24 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Future<void> _createGroup() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
-    
+
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     final memberIds = [currentUser.uid, ..._selectedFriendIds];
     final groupName = _nameController.text.trim();
-    
+
     try {
       final groupId = await GroupService.createGroup(
         name: groupName,
         emoji: _selectedEmoji,
         memberIds: memberIds,
       );
-      
+
       HapticFeedback.mediumImpact();
-      
+
       if (!mounted) return;
-      
+
       final group = Group(
         id: groupId,
         name: groupName,
@@ -67,11 +84,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         memberIds: memberIds,
         createdAt: DateTime.now(),
       );
-      
-      Navigator.pushReplacementNamed(context, AppRoutes.groupDetail, arguments: group);
+
+      Navigator.pushReplacementNamed(context, AppRoutes.groupDetail,
+          arguments: group);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
       setState(() => _isSaving = false);
     }
   }
@@ -104,7 +123,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Step 1 of 2: Group Details', style: AppTextStyles.titleMedium),
+          const Text('Step 1 of 2: Group Details',
+              style: AppTextStyles.titleMedium),
           const SizedBox(height: 24),
           const Text('Pick an emoji', style: AppTextStyles.titleSmall),
           const SizedBox(height: 8),
@@ -116,13 +136,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedEmoji = emoji),
                 child: Container(
-                  width: 44, height: 44,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surfaceAlt,
+                    color: isSelected
+                        ? AppColors.accent.withValues(alpha: 0.15)
+                        : AppColors.surfaceAlt,
                     borderRadius: AppRadius.sm,
-                    border: Border.all(color: isSelected ? AppColors.accent : AppColors.border),
+                    border: Border.all(
+                        color:
+                            isSelected ? AppColors.accent : AppColors.border),
                   ),
-                  child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
+                  child: Center(
+                      child: Text(emoji, style: const TextStyle(fontSize: 22))),
                 ),
               );
             }).toList(),
@@ -134,7 +160,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
             autofocus: true,
-            decoration: const InputDecoration(hintText: 'e.g. Apt 7777, Dallas Trip'),
+            decoration:
+                const InputDecoration(hintText: 'e.g. Apt 7777, Dallas Trip'),
           ),
         ],
       ),
@@ -148,7 +175,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text('Step 2 of 2: Select Members', style: AppTextStyles.titleMedium),
+          child: Text('Step 2 of 2: Select Members',
+              style: AppTextStyles.titleMedium),
         ),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
@@ -164,10 +192,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               }
               final docs = snapshot.data?.docs ?? [];
               if (docs.isEmpty) {
-                return const Center(child: Text('No accepted friends found.\nAdd friends first!', textAlign: TextAlign.center));
+                return const Center(
+                    child: Text(
+                        'No accepted friends found.\nAdd friends first!',
+                        textAlign: TextAlign.center));
               }
               final friends = docs.map((d) => Friend.fromFirestore(d)).toList();
-              
+
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: friends.length,
@@ -210,7 +241,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           if (_currentStep == 1)
             TextButton(
               onPressed: _prevStep,
-              child: const Text('Back', style: TextStyle(color: AppColors.primary)),
+              child: const Text('Back',
+                  style: TextStyle(color: AppColors.primary)),
             )
           else
             const SizedBox.shrink(),
@@ -220,9 +252,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               minimumSize: const Size(120, 48),
             ),
             onPressed: _isSaving ? null : _nextStep,
-            child: _isSaving 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text(_currentStep == 0 ? 'Next' : 'Create Group', style: const TextStyle(color: Colors.white)),
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : Text(_currentStep == 0 ? 'Next' : 'Create Group',
+                    style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

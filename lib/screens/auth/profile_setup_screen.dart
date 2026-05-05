@@ -47,7 +47,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
     if (mounted) {
       if (success) {
-        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.root, (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+            context, AppRoutes.root, (route) => false);
       } else {
         setState(() {
           _isLoading = false;
@@ -80,7 +81,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Your friends will use this to find you and split bills.',
-                  style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyLarge
+                      .copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 40),
                 const Text('Full Name', style: AppTextStyles.titleSmall),
@@ -92,7 +94,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   decoration: const InputDecoration(
                     hintText: 'John Doe',
                   ),
-                  validator: (v) => (v == null || v.trim().length < 2) ? 'Please enter your full name' : null,
+                  validator: (v) => (v == null || v.trim().length < 2)
+                      ? 'Please enter your full name'
+                      : null,
                 ),
                 const SizedBox(height: 24),
                 const Text('Username Handle', style: AppTextStyles.titleSmall),
@@ -106,9 +110,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     prefixText: '@',
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Handle is required';
-                    if (v.trim().contains(' ')) return 'Handle cannot contain spaces';
-                    if (v.trim().length < 3) return 'Handle must be at least 3 characters';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Handle is required';
+                    }
+                    if (v.trim().contains(' ')) {
+                      return 'Handle cannot contain spaces';
+                    }
+                    if (v.trim().length < 3) {
+                      return 'Handle must be at least 3 characters';
+                    }
                     return null;
                   },
                 ),
@@ -116,7 +126,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _errorMessage!,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.danger),
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.danger),
                   ),
                 ],
                 const SizedBox(height: 48),
@@ -128,7 +139,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Complete Setup'),
                   ),

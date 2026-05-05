@@ -17,27 +17,20 @@ class OverallBalanceCard extends StatelessWidget {
 
     for (final doc in expenses.docs) {
       final data = doc.data();
-      final rawSplits = Map<String, dynamic>.from(data['splits'] ?? {});
+      final splits = Map<String, dynamic>.from(data['splits'] ?? {});
       final paidBy = data['paidById'] as String? ?? '';
-      final fallbackId = paidBy.isNotEmpty ? paidBy : (data['creatorId'] ?? data['sharedBy'] ?? userId);
-      
-      final splits = <String, dynamic>{};
-      rawSplits.forEach((k, v) => splits[k == 'me' ? fallbackId : k] = v);
 
-      if (paidBy == userId) {
-        // Rule 1: User as Payer - they are owed by each other member for their share
-        splits.forEach((friendId, amount) {
-          if (friendId != userId) {
-            final amt = double.parse(((amount as num).toDouble()).toStringAsFixed(2));
-            netBalances[friendId] = double.parse(((netBalances[friendId] ?? 0) + amt).toStringAsFixed(2));
-          }
-        });
-      } else {
-        // Rule 2: User as Participant - they owe the payer for their specific share
-        if (splits.containsKey(userId)) {
-          final myAmt = double.parse(((splits[userId] as num).toDouble()).toStringAsFixed(2));
-          netBalances[paidBy] = double.parse(((netBalances[paidBy] ?? 0) - myAmt).toStringAsFixed(2));
+      splits.forEach((friendId, amount) {
+        if (friendId == userId) return;
+        final amt = (amount as num).toDouble();
+        if (paidBy == userId) {
+          netBalances[friendId] = (netBalances[friendId] ?? 0) + amt;
         }
+      });
+
+      if (paidBy != userId && splits.containsKey(userId)) {
+        final myAmt = (splits[userId] as num).toDouble();
+        netBalances[paidBy] = (netBalances[paidBy] ?? 0) - myAmt;
       }
     }
 
@@ -89,7 +82,7 @@ class OverallBalanceCard extends StatelessWidget {
           builder: (context, snapshot) {
             double totalOwed = snapshot.data?['totalOwed'] ?? 0;
             double totalOwe = snapshot.data?['totalOwe'] ?? 0;
-            
+
             final net = totalOwed - totalOwe;
             final isPositive = net >= 0;
 
@@ -107,7 +100,8 @@ class OverallBalanceCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Overall balance', style: AppTextStyles.labelMedium),
+                        const Text('Overall balance',
+                            style: AppTextStyles.labelMedium),
                         const SizedBox(height: 4),
                         Text(
                           net == 0
@@ -123,7 +117,9 @@ class OverallBalanceCard extends StatelessWidget {
                         ),
                         if (net != 0)
                           Text(
-                            isPositive ? 'you are owed overall' : 'you owe overall',
+                            isPositive
+                                ? 'you are owed overall'
+                                : 'you owe overall',
                             style: AppTextStyles.bodySmall,
                           ),
                       ],
