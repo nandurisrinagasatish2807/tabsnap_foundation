@@ -32,3 +32,5 @@ Pods/
 # Personal/Auto-generated logs
 *.log
 android/.kotlin/
+# Sensitive Firebase config
+lib/firebase_options.dart
