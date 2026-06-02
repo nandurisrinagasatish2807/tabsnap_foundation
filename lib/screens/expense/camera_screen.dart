@@ -1,5 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -24,6 +26,7 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   File? _image;
+  Uint8List? _webImageBytes;
   bool _isScanning = false;
   String _scanStatus = '';
   final _picker = ImagePicker();
@@ -36,55 +39,74 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final testFile = File('/sdcard/Download/receipt.jpg');
-
-    if (await testFile.exists()) {
-      if (!mounted) return;
-      final bool? useTest = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Test Receipt Found!'),
-          content: const Text('Use the local test receipt?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Yes'),
-            ),
-          ],
-        ),
-      );
-
-      if (useTest == true) {
-        setState(() {
-          _image = testFile;
-          _isScanning = false;
-          _scanStatus = '';
-        });
-        _scanReceipt();
-        return;
-      }
-    }
-
-    final picked = await _picker.pickImage(
+    // Always invoke pickImage immediately to satisfy web browser security requirements for file dialogs
+    final XFile? picked = await _picker.pickImage(
       source: source,
       imageQuality: 90,
     );
-    if (picked == null) return;
+
+    if (picked != null) {
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        _processImageBytes(bytes);
+        // Automatically trigger scan/review navigation only after successful file selection
+        _scanReceipt();
+      } else {
+        _processImageFile(File(picked.path));
+      }
+    } else {
+      // If no file was chosen from dialog, check for test file on mobile
+      if (!kIsWeb) {
+        final testFile = File('/sdcard/Download/receipt.jpg');
+        if (await testFile.exists()) {
+          if (!mounted) return;
+          final bool? useTest = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Test Receipt Found!'),
+              content: const Text('Use the local test receipt?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('No'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Yes'),
+                ),
+              ],
+            ),
+          );
+
+          if (useTest == true) {
+            _processImageFile(testFile);
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  void _processImageBytes(Uint8List bytes) {
     setState(() {
-      _image = File(picked.path);
+      _webImageBytes = bytes;
+      _image = null;
       _isScanning = false;
       _scanStatus = '';
     });
   }
 
-
+  void _processImageFile(File file) {
+    setState(() {
+      _image = file;
+      _webImageBytes = null;
+      _isScanning = false;
+      _scanStatus = '';
+    });
+  }
 
   Future<void> _scanReceipt() async {
-    if (_image == null) return;
+    if (_image == null && _webImageBytes == null) return;
 
     setState(() {
       _isScanning = true;
@@ -95,6 +117,18 @@ class _CameraScreenState extends State<CameraScreen> {
       final service = TextRecognitionService();
 
       setState(() => _scanStatus = 'Detecting text...');
+
+      if (kIsWeb) {
+        // Mock OCR extraction for Web platform demonstration
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        _goToReview([
+          ReceiptItem(id: 'w1', name: 'Sourdough Loaf', price: 6.50),
+          ReceiptItem(id: 'w2', name: 'Fresh Pineapple', price: 4.99),
+          ReceiptItem(id: 'w3', name: 'Almond Milk', price: 5.29),
+        ]);
+        return;
+      }
 
       // Step 1: Extract all lines with coordinates
       final lines = await service.extractLines(_image!);
@@ -186,7 +220,7 @@ class _CameraScreenState extends State<CameraScreen> {
           Expanded(
             child: _isScanning
                 ? _ScanningView(status: _scanStatus)
-                : _image == null
+                : _image == null && _webImageBytes == null
                     ? _PickImageView(
                         onCamera: () => _pickImage(ImageSource.camera),
                         onGallery: () => _pickImage(ImageSource.gallery),
@@ -201,8 +235,12 @@ class _CameraScreenState extends State<CameraScreen> {
                         ),
                       )
                     : _ImagePreviewView(
-                        image: _image!,
-                        onRetake: () => setState(() => _image = null),
+                        image: _image,
+                        webBytes: _webImageBytes,
+                        onRetake: () => setState(() {
+                          _image = null;
+                          _webImageBytes = null;
+                        }),
                         onScan: _scanReceipt,
                       ),
           ),
@@ -338,12 +376,14 @@ class _PickImageView extends StatelessWidget {
 // ─── Image Preview View ───────────────────────────────────────────────────────
 
 class _ImagePreviewView extends StatelessWidget {
-  final File image;
+  final File? image;
+  final Uint8List? webBytes;
   final VoidCallback onRetake;
   final VoidCallback onScan;
 
   const _ImagePreviewView({
-    required this.image,
+    this.image,
+    this.webBytes,
     required this.onRetake,
     required this.onScan,
   });
@@ -357,11 +397,19 @@ class _ImagePreviewView extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: ClipRRect(
               borderRadius: AppRadius.lg,
-              child: Image.file(
-                image,
-                fit: BoxFit.contain,
-                width: double.infinity,
-              ),
+              child: kIsWeb && webBytes != null
+                  ? Image.memory(
+                      webBytes!,
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                    )
+                  : image != null
+                      ? Image.file(
+                          image!,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                        )
+                      : const SizedBox.shrink(),
             ),
           ),
         ),

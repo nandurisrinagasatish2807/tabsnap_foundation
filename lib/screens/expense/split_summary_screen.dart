@@ -478,7 +478,9 @@ class _SplitSummaryScreenState extends State<SplitSummaryScreen> {
                         .take(2)
                         .join();
 
-                    final thisMemberPaid = _paidBy.id == memberId;
+                    final isMe = memberId == currentUid || memberId == 'me';
+                    final paidByMe = _paidBy.id == 'me' || _paidBy.id == currentUid;
+                    final thisMemberPaid = _paidBy.id == memberId || (paidByMe && isMe);
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),

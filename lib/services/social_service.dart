@@ -45,6 +45,14 @@ class SocialService {
       'status': 'pending_sent',
     });
 
+    final myData = currentUserDoc.data() ?? {};
+    String? rawName = myData['fullName'] as String? ?? myData['name'] as String?;
+    if (rawName != null && rawName.trim().isEmpty) rawName = null;
+    
+    final myName = rawName ?? 
+                   currentUser.email?.split('@')[0] ?? 
+                   'TabSnap User';
+
     // 2. Add to target's friend list (pending_received)
     final targetFriendRef = db
         .collection('users')
@@ -53,7 +61,7 @@ class SocialService {
         .doc(currentUser.uid);
     
     batch.set(targetFriendRef, {
-      'name': currentProfile.fullName,
+      'name': myName,
       'email': currentProfile.email,
       'handle': currentProfile.handle,
       'colorIndex': Random().nextInt(8),

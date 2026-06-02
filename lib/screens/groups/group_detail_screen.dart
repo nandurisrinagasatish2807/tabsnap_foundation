@@ -1,4 +1,5 @@
 // ignore_for_file: prefer_const_constructors
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,6 +28,7 @@ class _GroupDetailScreenState
   final Map<String, int> _colorCache = {};
   Map<String, double>? _netBalances;
   bool _balancesLoading = true;
+  String? _loadError;
   String _groupNotes = '';
   Group? _group;
 
@@ -37,8 +39,56 @@ class _GroupDetailScreenState
   }
 
   Future<void> _loadEverything() async {
-    final uid =
-        FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (!mounted) return;
+    
+    setState(() {
+      _balancesLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      // 10-second timeout to prevent the app from hanging forever
+      await _performDataFetch().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('The server took too long to respond.');
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _balancesLoading = false;
+          _loadError = null;
+        });
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        setState(() {
+          _balancesLoading = false;
+          _loadError = e.code == 'permission-denied' 
+              ? "Access Denied. You might not be a member of this group." 
+              : "Database error: ${e.message}";
+        });
+      }
+    } on TimeoutException catch (_) {
+      if (mounted) {
+        setState(() {
+          _balancesLoading = false;
+          _loadError = "Connection timed out. Please pull down to retry.";
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _balancesLoading = false;
+          _loadError = "An unexpected error occurred. Please try again.";
+        });
+      }
+    }
+  }
+
+  Future<void> _performDataFetch() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     // Load self
     final selfDoc = await FirebaseFirestore.instance
@@ -71,9 +121,6 @@ class _GroupDetailScreenState
     
     if (group == null) {
       if (mounted) {
-        setState(() {
-          _balancesLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Group not found')),
         );
@@ -102,7 +149,6 @@ class _GroupDetailScreenState
     if (mounted) {
       setState(() {
         _netBalances = balances;
-        _balancesLoading = false;
       });
     }
   }
@@ -375,11 +421,59 @@ class _GroupDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_group == null) {
+    if (_loadError != null) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(backgroundColor: AppColors.primary),
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.danger, size: 60),
+                const SizedBox(height: 16),
+                Text(
+                  _loadError!,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _loadEverything,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("Try Again"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary, // Navy
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_group == null || _balancesLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
 

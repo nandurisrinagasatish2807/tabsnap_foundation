@@ -82,7 +82,7 @@ class Friend {
     final d = doc.data() as Map<String, dynamic>;
     return Friend(
       id: doc.id,
-      fullName: d['fullName'] ?? '',
+      fullName: d['name'] ?? d['fullName'] ?? '',
       email: d['email'],
       colorIndex: d['colorIndex'] ?? 0,
       isTemporary: d['isTemporary'] ?? false,
@@ -93,6 +93,7 @@ class Friend {
   }
 
   Map<String, dynamic> toFirestore() => {
+        'name': fullName,
         'fullName': fullName,
         'email': email,
         'colorIndex': colorIndex,
