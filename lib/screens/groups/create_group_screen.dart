@@ -86,7 +86,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       );
 
       Navigator.pushReplacementNamed(context, AppRoutes.groupDetail,
-          arguments: group);
+          arguments: groupId);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
