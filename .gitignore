@@ -47,3 +47,7 @@ ios/Runner/GoogleService-Info.plist
 
 # Logs
 *.log
+
+# Ignore local Firebase cache directories
+.firebase/
+hosting.*
