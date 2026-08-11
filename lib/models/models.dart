@@ -154,12 +154,14 @@ class ReceiptItem {
   final String id;
   final String name;
   final double price;
+  final int? quantity;
   List<String> assignedTo; // friend IDs
 
   ReceiptItem({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity,
     List<String>? assignedTo,
   }) : assignedTo = assignedTo ?? [];
 
@@ -167,6 +169,7 @@ class ReceiptItem {
         'id': id,
         'name': name,
         'price': price,
+        if (quantity != null) 'quantity': quantity,
         'assignedTo': assignedTo,
       };
 
@@ -174,6 +177,7 @@ class ReceiptItem {
         id: m['id'] ?? '',
         name: m['name'] ?? '',
         price: (m['price'] as num).toDouble(),
+        quantity: m['quantity'] != null ? (m['quantity'] as num).toInt() : null,
         assignedTo: List<String>.from(m['assignedTo'] ?? []),
       );
 

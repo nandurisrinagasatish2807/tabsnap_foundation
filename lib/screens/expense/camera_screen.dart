@@ -39,50 +39,62 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    // Always invoke pickImage immediately to satisfy web browser security requirements for file dialogs
-    final XFile? picked = await _picker.pickImage(
-      source: source,
-      imageQuality: 90,
-    );
+    if (_isScanning) return;
 
-    if (picked != null) {
-      if (kIsWeb) {
-        final bytes = await picked.readAsBytes();
-        _processImageBytes(bytes);
-        // Automatically trigger scan/review navigation only after successful file selection
-        _scanReceipt();
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+
+      if (picked != null) {
+        if (kIsWeb) {
+          final bytes = await picked.readAsBytes();
+          _processImageBytes(bytes);
+          _scanReceipt();
+        } else {
+          _processImageFile(File(picked.path));
+          _scanReceipt();
+        }
       } else {
-        _processImageFile(File(picked.path));
-      }
-    } else {
-      // If no file was chosen from dialog, check for test file on mobile
-      if (!kIsWeb) {
-        final testFile = File('/sdcard/Download/receipt.jpg');
-        if (await testFile.exists()) {
-          if (!mounted) return;
-          final bool? useTest = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Test Receipt Found!'),
-              content: const Text('Use the local test receipt?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('No'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Yes'),
-                ),
-              ],
-            ),
-          );
+        // Test fallback for mobile local emulation
+        if (!kIsWeb) {
+          final testFile = File('/sdcard/Download/receipt.jpg');
+          if (await testFile.exists()) {
+            if (!mounted) return;
+            final bool? useTest = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Test Receipt Found!'),
+                content: const Text('Use the local test receipt?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('No'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Yes'),
+                  ),
+                ],
+              ),
+            );
 
-          if (useTest == true) {
-            _processImageFile(testFile);
-            return;
+            if (useTest == true) {
+              _processImageFile(testFile);
+              _scanReceipt();
+            }
           }
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open image picker. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -91,8 +103,6 @@ class _CameraScreenState extends State<CameraScreen> {
     setState(() {
       _webImageBytes = bytes;
       _image = null;
-      _isScanning = false;
-      _scanStatus = '';
     });
   }
 
@@ -100,8 +110,6 @@ class _CameraScreenState extends State<CameraScreen> {
     setState(() {
       _image = file;
       _webImageBytes = null;
-      _isScanning = false;
-      _scanStatus = '';
     });
   }
 
@@ -119,7 +127,6 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() => _scanStatus = 'Detecting text...');
 
       if (kIsWeb) {
-        // Mock OCR extraction for Web platform demonstration
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
         _goToReview([
@@ -130,15 +137,12 @@ class _CameraScreenState extends State<CameraScreen> {
         return;
       }
 
-      // Step 1: Extract all lines with coordinates
       final lines = await service.extractLines(_image!);
 
       setState(() => _scanStatus = 'Pairing items with prices...');
 
-      // Step 2: Parse using coordinate-based logic
       final receipt = service.parseReceipt(lines);
 
-      // Debug output in terminal
       debugPrint('=== OCR RESULT: ${lines.length} lines ===');
       for (final l in lines) {
         debugPrint('  [y:${l.centerY.toInt()}] ${l.text}');
@@ -157,39 +161,38 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      // Convert to ReceiptItem list
       final items = receipt.items
           .where((i) => i.confidence >= 0.5)
           .map((i) => ReceiptItem(
-                id: '${DateTime.now().millisecondsSinceEpoch}'
-                    '${receipt.items.indexOf(i)}',
+                id: '${DateTime.now().millisecondsSinceEpoch}${receipt.items.indexOf(i)}',
                 name: i.name,
                 price: i.price,
+                quantity: i.quantity,
               ))
           .toList();
 
       _goToReview(items);
     } catch (e) {
-      setState(() {
-        _isScanning = false;
-        _scanStatus = '';
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not read receipt. Please try again or add items manually.'),
+            content: Text(
+                'Could not read receipt. Please try again or add items manually.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _scanStatus = '';
+        });
       }
     }
   }
 
   void _goToReview(List<ReceiptItem> items) {
-    setState(() {
-      _isScanning = false;
-      _scanStatus = '';
-    });
     Navigator.pushNamed(
       context,
       AppRoutes.reviewItems,
@@ -214,13 +217,13 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
         title: Text('Scan Receipt', style: AppTextStyles.titleMedium),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          _StepIndicator(step: 2),
-          Expanded(
-            child: _isScanning
-                ? _ScanningView(status: _scanStatus)
-                : _image == null && _webImageBytes == null
+          Column(
+            children: [
+              _StepIndicator(step: 2),
+              Expanded(
+                child: _image == null && _webImageBytes == null
                     ? _PickImageView(
                         onCamera: () => _pickImage(ImageSource.camera),
                         onGallery: () => _pickImage(ImageSource.gallery),
@@ -243,7 +246,14 @@ class _CameraScreenState extends State<CameraScreen> {
                         }),
                         onScan: _scanReceipt,
                       ),
+              ),
+            ],
           ),
+          if (_isScanning)
+            Container(
+              color: AppColors.background.withValues(alpha: 0.85),
+              child: _ScanningView(status: _scanStatus),
+            ),
         ],
       ),
     );

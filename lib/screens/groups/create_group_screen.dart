@@ -71,6 +71,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         name: groupName,
         emoji: _selectedEmoji,
         memberIds: memberIds,
+        creatorId: currentUser.uid,
       );
 
       HapticFeedback.mediumImpact();

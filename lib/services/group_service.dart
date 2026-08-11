@@ -14,6 +14,7 @@ class GroupService {
     required String name,
     required String emoji,
     required List<String> memberIds,
+    required String creatorId,
   }) async {
     final db = FirebaseFirestore.instance;
     final batch = db.batch();
@@ -24,21 +25,16 @@ class GroupService {
       'name': name,
       'emoji': emoji,
       'memberIds': memberIds,
+      'creator': creatorId,
       'notes': '',
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // 2. Write reference stub in /users/{memberId}/groups/{groupId}
-    for (final memberId in memberIds) {
-      final userGroupRef = db
-          .collection('users')
-          .doc(memberId)
-          .collection('groups')
-          .doc(groupRef.id);
-      batch.set(userGroupRef, {
-        'joinedAt': FieldValue.serverTimestamp(),
-      });
-    }
+    // 2. Write reference stub for creator only (auth user may write own user doc)
+    batch.set(
+      db.collection('users').doc(creatorId).collection('groups').doc(groupRef.id),
+      {'joinedAt': FieldValue.serverTimestamp()},
+    );
 
     // 3. Log group creation activity
     final activityRef = db
@@ -51,7 +47,7 @@ class GroupService {
       'type': 'groupCreated',
       'description': 'Group "$name" was created',
       'groupId': groupRef.id,
-      'creatorId': memberIds.first,
+      'creatorId': creatorId,
       'relatedId': groupRef.id,
       'involvedUsers': memberIds,
       'createdAt': FieldValue.serverTimestamp(),

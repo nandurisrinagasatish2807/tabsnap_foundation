@@ -33,6 +33,7 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
               id: item.id,
               name: item.name,
               price: item.price,
+              quantity: item.quantity,
               assignedTo: List<String>.from(item.assignedTo),
             ))
         .toList();
@@ -177,7 +178,7 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
           const Divider(height: 1),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               itemCount: _items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) => _ItemAssignCard(
@@ -189,48 +190,15 @@ class _AssignItemsScreenState extends State<AssignItemsScreen> {
               ),
             ),
           ),
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_splits.isNotEmpty) ...[
-                  _SplitPreview(
-                    splits: _splits,
-                    friends: _friendsWithMe,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (!_allItemsAssigned)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '${_items.where((i) => i.assignedTo.isEmpty).length} items still need assignment',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.warning,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _allItemsAssigned ? _goToSummary : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _allItemsAssigned ? AppColors.accent : AppColors.border,
-                    ),
-                    child: const Text(
-                      'Review Split →',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
+      ),
+      bottomNavigationBar: _StickySplitBar(
+        splits: _splits,
+        friends: _friendsWithMe,
+        allItemsAssigned: _allItemsAssigned,
+        unassignedCount:
+            _items.where((i) => i.assignedTo.isEmpty).length,
+        onContinue: _goToSummary,
       ),
     );
   }
@@ -256,6 +224,9 @@ class _ItemAssignCard extends StatelessWidget {
     final isAssigned = item.assignedTo.isNotEmpty;
     final sharePerPerson =
         item.assignedTo.isEmpty ? 0.0 : item.price / item.assignedTo.length;
+    final assignedFriends = friends
+        .where((friend) => item.assignedTo.contains(friend.id))
+        .toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -273,14 +244,33 @@ class _ItemAssignCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  item.name,
-                  style: AppTextStyles.titleSmall,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          item.name,
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        if (item.quantity != null && item.quantity! > 0)
+                          _QuantityBadge(quantity: item.quantity!),
+                      ],
+                    ),
+                    if (isAssigned) ...[
+                      const SizedBox(height: 10),
+                      _AssignedAvatarRow(friends: assignedFriends),
+                    ],
+                  ],
                 ),
               ),
+              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -309,6 +299,7 @@ class _ItemAssignCard extends StatelessWidget {
                 isSelected: isAllSelected,
                 color: AppColors.accent,
                 onTap: onToggleAll,
+                showAvatar: false,
               ),
               ...friends.map((friend) {
                 final isSelected = item.assignedTo.contains(friend.id);
@@ -317,6 +308,8 @@ class _ItemAssignCard extends StatelessWidget {
                   isSelected: isSelected,
                   color: AvatarColors.get(friend.colorIndex),
                   onTap: () => onTogglePerson(friend.id),
+                  initials: friend.initials,
+                  showAvatar: true,
                 );
               }),
             ],
@@ -345,17 +338,111 @@ class _ItemAssignCard extends StatelessWidget {
   }
 }
 
+class _QuantityBadge extends StatelessWidget {
+  final int quantity;
+
+  const _QuantityBadge({required this.quantity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: AppRadius.pill,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Text(
+        '×$quantity',
+        style: AppTextStyles.labelMedium.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignedAvatarRow extends StatelessWidget {
+  final List<Friend> friends;
+
+  const _AssignedAvatarRow({required this.friends});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: friends
+          .map(
+            (friend) => _FriendAvatar(
+              friend: friend,
+              size: 28,
+              showBorder: true,
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _FriendAvatar extends StatelessWidget {
+  final Friend friend;
+  final double size;
+  final bool showBorder;
+
+  const _FriendAvatar({
+    required this.friend,
+    this.size = 24,
+    this.showBorder = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AvatarColors.get(friend.colorIndex);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AvatarColors.background(friend.colorIndex),
+        shape: BoxShape.circle,
+        border: showBorder
+            ? Border.all(color: color.withValues(alpha: 0.35), width: 1.5)
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          friend.initials,
+          style: TextStyle(
+            fontSize: size * 0.34,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SmartBubble extends StatelessWidget {
   final String label;
   final bool isSelected;
   final Color color;
   final VoidCallback onTap;
+  final String? initials;
+  final bool showAvatar;
 
   const _SmartBubble({
     required this.label,
     required this.isSelected,
     required this.color,
     required this.onTap,
+    this.initials,
+    this.showAvatar = false,
   });
 
   @override
@@ -364,7 +451,10 @@ class _SmartBubble extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: showAvatar ? 10 : 14,
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? color : color.withValues(alpha: 0.1),
           borderRadius: AppRadius.pill,
@@ -372,99 +462,192 @@ class _SmartBubble extends StatelessWidget {
             color: isSelected ? color : color.withValues(alpha: 0.3),
           ),
         ),
-        child: Text(
-          label,
-          style: AppTextStyles.titleSmall.copyWith(
-            color: isSelected ? Colors.white : color,
-            fontSize: 13,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showAvatar && initials != null) ...[
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : color.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    initials!,
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : color,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.titleSmall.copyWith(
+                color: isSelected ? Colors.white : color,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _SplitPreview extends StatelessWidget {
+class _StickySplitBar extends StatelessWidget {
   final Map<String, double> splits;
   final List<Friend> friends;
+  final bool allItemsAssigned;
+  final int unassignedCount;
+  final VoidCallback onContinue;
 
-  const _SplitPreview({
+  const _StickySplitBar({
     required this.splits,
     required this.friends,
+    required this.allItemsAssigned,
+    required this.unassignedCount,
+    required this.onContinue,
   });
 
   @override
   Widget build(BuildContext context) {
-    final assignedFriends =
-        friends.where((f) => splits.containsKey(f.id)).toList();
-
-    if (assignedFriends.isEmpty) return const SizedBox();
-
-    final splitsTotal = splits.values.fold(0.0, (acc, v) => acc + v);
+    final splitsTotal = splits.values.fold(0.0, (acc, value) => acc + value);
 
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: AppRadius.md,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Current split', style: AppTextStyles.labelMedium),
-              Text(
-                'Total: \$${splitsTotal.toStringAsFixed(2)}',
-                style: AppTextStyles.labelMedium.copyWith(color: AppColors.accent),
-              ),
-            ],
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
           ),
-          const SizedBox(height: 8),
-          ...assignedFriends.map((friend) {
-            final amount = splits[friend.id] ?? 0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AvatarColors.background(friend.colorIndex),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        friend.initials,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: AvatarColors.get(friend.colorIndex),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      friend.fullName.split(' ').first,
-                      style: AppTextStyles.bodyMedium,
-                    ),
+                  Text(
+                    'Running totals',
+                    style: AppTextStyles.labelMedium,
                   ),
                   Text(
-                    '\$${amount.toStringAsFixed(2)}',
-                    style: AppTextStyles.titleSmall.copyWith(
+                    'Assigned: \$${splitsTotal.toStringAsFixed(2)}',
+                    style: AppTextStyles.labelMedium.copyWith(
                       color: AppColors.accent,
                     ),
                   ),
                 ],
               ),
-            );
-          }),
-        ],
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 72,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: friends.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final friend = friends[index];
+                    final amount = splits[friend.id] ?? 0.0;
+                    final hasShare = amount >= 0.01;
+
+                    return Container(
+                      width: 112,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: hasShare
+                            ? AvatarColors.background(friend.colorIndex)
+                            : AppColors.surfaceAlt,
+                        borderRadius: AppRadius.md,
+                        border: Border.all(
+                          color: hasShare
+                              ? AvatarColors.get(friend.colorIndex)
+                                  .withValues(alpha: 0.25)
+                              : AppColors.border,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              _FriendAvatar(friend: friend, size: 22),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  friend.fullName.split(' ').first,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            '\$${amount.toStringAsFixed(2)}',
+                            style: AppTextStyles.titleSmall.copyWith(
+                              color: hasShare
+                                  ? AvatarColors.get(friend.colorIndex)
+                                  : AppColors.textHint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (!allItemsAssigned) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '$unassignedCount ${unassignedCount == 1 ? 'item' : 'items'} still need assignment',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.warning,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: allItemsAssigned ? onContinue : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        allItemsAssigned ? AppColors.accent : AppColors.border,
+                  ),
+                  child: const Text(
+                    'Review Split →',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
